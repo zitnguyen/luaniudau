@@ -1,0 +1,193 @@
+import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { PlayIcon } from "@heroicons/react/24/solid";
+
+// Placeholder image if local asset is missing
+const heroImage = "https://images.unsplash.com/photo-1586165368502-1bad197a6461?w=800&q=80"; // Chess image
+
+const HeroSection = () => {
+  return (
+    <section className="relative min-h-[90vh] flex items-center bg-secondary overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="chess-pattern w-full h-full" />
+      </div>
+
+      {/* Animated Chess Pieces */}
+      <motion.div
+        className="absolute top-20 right-10 text-8xl opacity-10 select-none"
+        animate={{ y: [0, -20, 0] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      >
+        ♛
+      </motion.div>
+      <motion.div
+        className="absolute bottom-32 left-10 text-7xl opacity-10 select-none"
+        animate={{ y: [0, 15, 0] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+      >
+        ♞
+      </motion.div>
+      <motion.div
+        className="absolute top-40 left-1/4 text-6xl opacity-5 select-none"
+        animate={{ rotate: [0, 10, -10, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+      >
+        ♜
+      </motion.div>
+
+      <div className="container relative z-10 py-20 mx-auto px-4">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Content */}
+          <div className="text-center lg:text-left">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <span className="inline-block px-4 py-2 bg-primary/20 text-primary rounded-full text-sm font-medium mb-6">
+                🏆 Trung tâm Cờ Vua hàng đầu
+              </span>
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-secondary-foreground leading-tight mb-6"
+            >
+              Phát triển{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-600">tư duy chiến lược</span> cho
+              thế hệ tương lai
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0"
+            >
+              Z Chess mang đến chương trình đào tạo cờ vua chất lượng cao, giúp
+              trẻ em phát triển tư duy logic, khả năng tập trung và kỹ năng giải
+              quyết vấn đề.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+            >
+              <Link to="/courses">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-primary text-primary-foreground text-lg px-8 py-4 w-full sm:w-auto rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl transition-all"
+                >
+                  Khám phá khóa học
+                </motion.button>
+              </Link>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex items-center justify-center gap-2 px-8 py-4 bg-transparent border-2 border-secondary-foreground/20 text-secondary-foreground rounded-xl font-medium hover:border-primary hover:text-primary transition-colors duration-300"
+              >
+                <PlayIcon className="w-5 h-5" />
+                Xem video giới thiệu
+              </motion.button>
+            </motion.div>
+
+            {/* Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="flex flex-wrap justify-center lg:justify-start gap-8 mt-12"
+            >
+              {[
+                { value: "500+", label: "Học viên" },
+                { value: "15+", label: "Giáo viên" },
+                { value: "50+", label: "Giải thưởng" },
+                { value: "10+", label: "Năm kinh nghiệm" },
+              ].map((stat, index) => (
+                <div key={index} className="text-center">
+                  <div className="text-3xl font-bold text-primary">
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {stat.label}
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Hero Image */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="relative hidden lg:block"
+          >
+            <div className="relative">
+              {/* Main Image Container */}
+              <div className="relative w-full aspect-square max-w-lg mx-auto">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-transparent rounded-3xl" />
+                <img
+                  src={heroImage}
+                  alt="Trẻ em học cờ vua tại Z Chess"
+                  className="w-full h-full object-cover rounded-3xl shadow-2xl"
+                />
+              </div>
+
+              {/* Floating Card */}
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute -bottom-6 -left-6 bg-card p-4 rounded-2xl shadow-xl border border-border"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center text-2xl">
+                    ♔
+                  </div>
+                  <div>
+                    <div className="font-semibold text-foreground">
+                      Học thử miễn phí
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      2 buổi đầu tiên
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Rating Card */}
+              <motion.div
+                animate={{ y: [0, 10, 0] }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 1,
+                }}
+                className="absolute -top-6 -right-6 bg-card p-4 rounded-2xl shadow-xl border border-border"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">⭐</span>
+                  <div>
+                    <div className="font-bold text-foreground">4.9/5</div>
+                    <div className="text-xs text-muted-foreground">
+                      200+ đánh giá
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default HeroSection;

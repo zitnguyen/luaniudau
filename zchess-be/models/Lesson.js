@@ -1,0 +1,20 @@
+const mongoose = require("mongoose");
+
+const lessonSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true },
+  chapterId: { type: mongoose.Schema.Types.ObjectId, ref: "Chapter", required: true },
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true }, // Denormalized for easier queries
+  type: { 
+    type: String, 
+    enum: ["video", "text", "quiz"], 
+    default: "video" 
+  },
+  content: { type: String }, // Video URL or text content
+  duration: { type: Number, default: 0 },
+  isFree: { type: Boolean, default: false }, 
+  order: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Lesson = mongoose.model("Lesson", lessonSchema);
+module.exports = Lesson;
