@@ -19,6 +19,14 @@ const ProgressAssessmentForm = ({
   studentName,
   className,
 }) => {
+  const formatSessionDate = (session) => {
+    const rawDate = session?.date || session?.attendanceId?.date || null;
+    if (!rawDate) return "Chưa có ngày";
+    const parsed = new Date(rawDate);
+    if (Number.isNaN(parsed.getTime())) return "Chưa có ngày";
+    return parsed.toLocaleDateString("vi-VN");
+  };
+
   const handleRemoveSession = (indexToRemove) => {
     setSessions((prevSessions) =>
       prevSessions.filter((_, index) => index !== indexToRemove),
@@ -99,11 +107,8 @@ const ProgressAssessmentForm = ({
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
                       Buổi / Ngày
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-1/2">
-                      Nội Dung Học
-                    </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                      Đánh Giá
+                      Nội Dung Học
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
                       Thao Tác
@@ -116,9 +121,7 @@ const ProgressAssessmentForm = ({
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
                         Buổi {index + 1} <br />
                         <span className="text-gray-500 font-normal">
-                          {session.date
-                            ? new Date(session.date).toLocaleDateString("vi-VN")
-                            : "Unknown"}
+                          {formatSessionDate(session)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -129,19 +132,6 @@ const ProgressAssessmentForm = ({
                           onChange={(e) => {
                             const newSessions = [...sessions];
                             newSessions[index].content = e.target.value;
-                            setSessions(newSessions);
-                          }}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:border-primary text-sm"
-                          placeholder="Tốt / Khá..."
-                          value={session.assessment || ""}
-                          onChange={(e) => {
-                            const newSessions = [...sessions];
-                            newSessions[index].assessment = e.target.value;
                             setSessions(newSessions);
                           }}
                         />
