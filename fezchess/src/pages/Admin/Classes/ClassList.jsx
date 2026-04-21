@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Calendar, Clock, Users, Edit, Trash2, Loader2, BookOpen, User, RotateCw, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Calendar, Clock, Users, Edit, Trash2, BookOpen, User, RotateCw, Filter, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import classService from '../../../services/classService';
+import TableSkeleton from '../../../components/ui/TableSkeleton';
+import useUndoDelete from '../../../hooks/useUndoDelete';
 
 const ClassList = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -14,6 +19,8 @@ const ClassList = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [highlightedRowId, setHighlightedRowId] = useState(null);
+    const { scheduleUndoDelete } = useUndoDelete();
 
     useEffect(() => {
         fetchClasses();
@@ -22,6 +29,15 @@ const ClassList = () => {
     useEffect(() => {
         applyFilters();
     }, [classes, searchTerm]);
+
+    useEffect(() => {
+        const updatedId = location.state?.updatedClassId;
+        if (!updatedId) return;
+        setHighlightedRowId(updatedId);
+        toast.success('✔ Cập nhật thành công', { icon: <CheckCircle2 size={16} /> });
+        const timeout = setTimeout(() => setHighlightedRowId(null), 2500);
+        return () => clearTimeout(timeout);
+    }, [location.state?.updatedClassId, location.state?.updatedAt]);
 
     const fetchClasses = async () => {
         try {
@@ -47,14 +63,19 @@ const ClassList = () => {
     };
 
     const handleDelete = async (id) => {
-        try {
-            await classService.delete(id);
-            setClasses(classes.filter(c => c._id !== id));
-            setDeleteConfirm(null);
-        } catch (err) {
-            console.error("Failed to delete class", err);
-            setError("Lỗi khi xóa lớp học");
-        }
+        const deletingClass = classes.find((c) => c._id === id);
+        if (!deletingClass) return;
+        setDeleteConfirm(null);
+        scheduleUndoDelete({
+            id,
+            item: deletingClass,
+            removeOptimistic: () => setClasses((prev) => prev.filter((c) => c._id !== id)),
+            restoreOptimistic: (classItem) => setClasses((prev) => [classItem, ...prev]),
+            commitDelete: () => classService.delete(id),
+            pendingMessage: "Đã xóa lớp học — Hoàn tác?",
+            successMessage: "✔ Xóa lớp học thành công",
+            errorMessage: "Lỗi khi xóa lớp học",
+        });
     };
 
     const handleRefresh = async () => {
@@ -160,10 +181,11 @@ const ClassList = () => {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
              {loading ? (
-                <div className="flex justify-center items-center py-12 text-gray-500">
-                    <Loader2 className="animate-spin mr-2" size={20}/>
-                    <span>Đang tải dữ liệu...</span>
-                </div>
+                <table className="min-w-full divide-y divide-gray-200">
+                    <tbody>
+                        <TableSkeleton rows={6} cols={6} />
+                    </tbody>
+                </table>
             ) : filteredClasses.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                     {classes.length === 0 ? 'Chưa có lớp học nào.' : 'Không tìm thấy lớp học phù hợp.'}
@@ -182,7 +204,18 @@ const ClassList = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                     {currentItems.map((cls, index) => (
-                        <tr key={cls._id || cls.id} className="hover:bg-gray-50 transition-colors group">
+                        <motion.tr
+                            key={cls._id || cls.id}
+                            initial={{ opacity: 0.5, scale: 0.98 }}
+                            animate={{
+                                opacity: 1,
+                                scale: 1,
+                                backgroundColor:
+                                    highlightedRowId === cls._id ? "rgb(240 253 244)" : "rgb(255 255 255)",
+                            }}
+                            transition={{ duration: 0.28, ease: "easeOut" }}
+                            className="hover:bg-gray-50 transition-colors group"
+                        >
                             <td className="px-6 py-4 whitespace-nowrap">
                                 <div>
                                     <div className="font-semibold text-gray-900">{cls.className}</div>
@@ -270,7 +303,7 @@ const ClassList = () => {
                                     </div>
                                 </div>
                             </td>
-                        </tr>
+                        </motion.tr>
                     ))}
                 </tbody>
             </table>

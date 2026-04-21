@@ -1,215 +1,190 @@
-import React, { useState, useEffect } from "react";
-import teachingLogService from "../../../../services/teachingLogService";
+import React, { useEffect, useMemo, useState } from "react";
 import classService from "../../../../services/classService";
+import payrollService from "../../../../services/payrollService";
+import authService from "../../../../services/authService";
 
 const TeachingLogList = () => {
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [sessions, setSessions] = useState([]);
   const [classes, setClasses] = useState([]);
-  const user = JSON.parse(localStorage.getItem("user"));
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  // Form State
+  const user = authService.getCurrentUser();
+  const teacherId = user?._id || user?.userId;
+
   const [formData, setFormData] = useState({
-    classId: "",
     date: new Date().toISOString().slice(0, 10),
-    startTime: "",
-    endTime: "",
-    note: "",
+    start_time: "",
+    end_time: "",
+    class_id: "",
   });
 
-  useEffect(() => {
-    fetchLogs();
-    fetchClasses();
-  }, []);
-
-  const fetchLogs = async () => {
+  const loadData = async () => {
     try {
-      const res = await teachingLogService.getMyLogs();
-      setLogs(res);
-    } catch (error) {
-      console.error("Failed to fetch logs", error);
+      setLoading(true);
+      setError("");
+      const [sessionData, classData] = await Promise.all([
+        payrollService.getTeacherSessions(),
+        teacherId ? classService.getByTeacher(teacherId) : Promise.resolve([]),
+      ]);
+      setSessions(Array.isArray(sessionData) ? sessionData : []);
+      setClasses(Array.isArray(classData) ? classData : []);
+    } catch (e) {
+      setError("Không thể tải dữ liệu ca dạy.");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchClasses = async () => {
-    try {
-      if (user?._id) {
-          const res = await classService.getByTeacher(user._id);
-          setClasses(res);
-      }
-    } catch (error) {
-       console.error("Failed to fetch classes", error);
-    }
-  };
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const calculateDuration = (start, end) => {
-    if (!start || !end) return 0;
-    const [h1, m1] = start.split(":").map(Number);
-    const [h2, m2] = end.split(":").map(Number);
-    const diff = (h2 * 60 + m2) - (h1 * 60 + m1);
-    return diff > 0 ? (diff / 60).toFixed(2) : 0;
-  };
+  const totalHours = useMemo(
+    () =>
+      Number(
+        sessions.reduce((sum, item) => sum + (Number(item.durationHours) || 0), 0).toFixed(2),
+      ),
+    [sessions],
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const durationHours = calculateDuration(formData.startTime, formData.endTime);
-    
-    if (durationHours <= 0) {
-        alert("Thời gian kết thúc phải sau thời gian bắt đầu");
-        return;
-    }
-
     try {
-      await teachingLogService.create({ ...formData, durationHours });
-      alert("Đã lưu ca dạy!");
-      setShowModal(false);
-      fetchLogs();
+      setSubmitting(true);
+      setError("");
+      await payrollService.createTeacherSession(formData);
       setFormData({
-        classId: "",
         date: new Date().toISOString().slice(0, 10),
-        startTime: "",
-        endTime: "",
-        note: "",
+        start_time: "",
+        end_time: "",
+        class_id: "",
       });
-    } catch (error) {
-      alert("Lỗi khi lưu: " + error.response?.data?.message || error.message);
+      await loadData();
+    } catch (e) {
+      setError(e?.response?.data?.message || "Không thể lưu ca dạy.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Bảng Lương & Ca Dạy</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          + Ghi Nhận Ca Dạy
-        </button>
+    <div className="space-y-5">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <h1 className="text-2xl font-bold text-gray-900">Ca dạy của tôi</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Giáo viên chỉ nhập ca dạy (không nhập lương). Tổng giờ hiện tại: {totalHours}h.
+        </p>
       </div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lớp</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thời gian</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số giờ</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ghi chú</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {logs.map((log) => (
-              <tr key={log._id}>
-                <td className="px-6 py-4 whitespace-nowrap">{new Date(log.date).toLocaleDateString('vi-VN')}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{log.classId?.className || "N/A"}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{log.startTime} - {log.endTime}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{log.durationHours}h</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                    ${log.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 
-                      log.status === 'Paid' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {log.status === 'Pending' ? 'Đang duyệt' : 
-                     log.status === 'Confirmed' ? 'Đã duyệt' : 
-                     log.status === 'Paid' ? 'Đã t.toán' : log.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.note}</td>
-              </tr>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Tạo ca dạy</h2>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input
+            type="date"
+            required
+            value={formData.date}
+            onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
+            className="px-3 py-2 border border-gray-200 rounded-lg"
+          />
+          <input
+            type="time"
+            required
+            value={formData.start_time}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, start_time: e.target.value }))
+            }
+            className="px-3 py-2 border border-gray-200 rounded-lg"
+          />
+          <input
+            type="time"
+            required
+            value={formData.end_time}
+            onChange={(e) => setFormData((prev) => ({ ...prev, end_time: e.target.value }))}
+            className="px-3 py-2 border border-gray-200 rounded-lg"
+          />
+          <select
+            required
+            value={formData.class_id}
+            onChange={(e) => setFormData((prev) => ({ ...prev, class_id: e.target.value }))}
+            className="px-3 py-2 border border-gray-200 rounded-lg"
+          >
+            <option value="">Chọn lớp</option>
+            {classes.map((item) => (
+              <option key={item._id} value={item._id}>
+                {item.className}
+              </option>
             ))}
-          </tbody>
-        </table>
+          </select>
+          <div className="md:col-span-4 flex justify-end">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-60"
+            >
+              {submitting ? "Đang lưu..." : "Lưu ca dạy"}
+            </button>
+          </div>
+        </form>
+        {error && (
+          <div className="mt-3 text-sm px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700">
+            {error}
+          </div>
+        )}
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Ghi Nhận Ca Dạy</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Ngày dạy</label>
-                <input
-                  type="date"
-                  required
-                  value={formData.date}
-                  onChange={(e) => setFormData({...formData, date: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Lớp học</label>
-                <select
-                  required
-                  value={formData.classId}
-                  onChange={(e) => setFormData({...formData, classId: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                >
-                    <option value="">-- Chọn lớp --</option>
-                    {classes.map(c => (
-                        <option key={c._id} value={c._id}>{c.className}</option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                   <label className="block text-sm font-medium text-gray-700">Bắt đầu</label>
-                   <input
-                     type="time"
-                     required
-                     value={formData.startTime}
-                     onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                   />
-                </div>
-                <div>
-                   <label className="block text-sm font-medium text-gray-700">Kết thúc</label>
-                   <input
-                     type="time"
-                     required
-                     value={formData.endTime}
-                     onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                   />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Ghi chú</label>
-                <textarea
-                  value={formData.note}
-                  onChange={(e) => setFormData({...formData, note: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                  rows="3"
-                ></textarea>
-              </div>
-
-              <div className="flex justify-end gap-2 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-                >
-                  Lưu
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-5 text-gray-500">Đang tải dữ liệu...</div>
+        ) : (
+          <table className="min-w-full">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                  Ngày
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                  Lớp
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                  Thời gian
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                  Số giờ
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                  Trạng thái
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {sessions.map((item) => (
+                <tr key={item._id}>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {new Date(item.date).toLocaleDateString("vi-VN")}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {item.classId?.className || "N/A"}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {item.startTime} - {item.endTime}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{item.durationHours}h</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{item.status}</td>
+                </tr>
+              ))}
+              {sessions.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                    Chưa có ca dạy nào.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 };

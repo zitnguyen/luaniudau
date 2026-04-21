@@ -215,14 +215,19 @@ const ClassForm = () => {
           classId: Number(formData.classId),
           students: selectedStudents // Send selected student IDs
       };
+      let savedId = id;
       if (isEditMode) {
         await classService.update(id, payload);
-        // Alert replaced by navigation
       } else {
-        await classService.create(payload);
-        // Alert replaced by navigation
+        const created = await classService.create(payload);
+        savedId = created?._id;
       }
-      navigate("/classes");
+      navigate("/classes", {
+        state: {
+          updatedClassId: savedId,
+          updatedAt: Date.now(),
+        },
+      });
     } catch (err) {
       console.error("Error saving class:", err);
       setError(err.response?.data?.message || "Lỗi khi lưu dữ liệu");

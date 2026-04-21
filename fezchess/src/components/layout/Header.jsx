@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { useSystemSettings } from "../../context/SystemSettingsContext";
+import ThemeToggle from "../common/ThemeToggle";
 
 const navLinks = [
   { name: "Trang chủ", path: "/" },
@@ -15,6 +17,7 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { settings } = useSystemSettings();
 
   const handleGoHome = () => {
     navigate("/");
@@ -28,15 +31,27 @@ const Header = () => {
         <nav className="flex items-center justify-between h-20">
           {/* Logo */}
           <button onClick={handleGoHome} className="flex items-center gap-3">
-            <motion.div
-              whileHover={{ rotate: 15 }}
-              transition={{ duration: 0.3 }}
-              className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center"
-            >
-              <span className="text-2xl">♔</span>
-            </motion.div>
+            {settings?.logoUrl ? (
+              <motion.img
+                whileHover={{ rotate: 8 }}
+                transition={{ duration: 0.3 }}
+                src={settings.logoUrl}
+                alt="Center logo"
+                className="w-12 h-12 rounded-xl object-cover border border-border"
+              />
+            ) : (
+              <motion.div
+                whileHover={{ rotate: 15 }}
+                transition={{ duration: 0.3 }}
+                className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center"
+              >
+                <span className="text-2xl">♔</span>
+              </motion.div>
+            )}
             <div className="text-left">
-              <h1 className="font-display text-xl font-bold">Z Chess</h1>
+              <h1 className="font-display text-xl font-bold">
+                {settings?.centerName || "Z Chess"}
+              </h1>
               <p className="text-xs text-muted-foreground">Trung tâm Cờ Vua</p>
             </div>
           </button>
@@ -66,6 +81,7 @@ const Header = () => {
 
           {/* Auth */}
           <div className="hidden md:flex items-center gap-4">
+            <ThemeToggle />
             <Link to="/login" className="font-medium hover:text-primary">
               Đăng nhập
             </Link>
@@ -81,16 +97,19 @@ const Header = () => {
           </div>
 
           {/* Mobile Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-muted"
-          >
-            {isOpen ? (
-              <XMarkIcon className="w-6 h-6" />
-            ) : (
-              <Bars3Icon className="w-6 h-6" />
-            )}
-          </button>
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 rounded-lg hover:bg-muted"
+            >
+              {isOpen ? (
+                <XMarkIcon className="w-6 h-6" />
+              ) : (
+                <Bars3Icon className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </nav>
 
         {/* Mobile Menu */}

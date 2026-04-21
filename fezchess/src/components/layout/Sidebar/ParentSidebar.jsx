@@ -1,15 +1,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, User, LogOut, MonitorPlay, TrendingUp } from 'lucide-react';
+import { Home, Calendar, User, LogOut, MonitorPlay, TrendingUp, Bell } from 'lucide-react';
+import authService from '../../../services/authService';
 
 const ParentSidebar = () => {
     const navItems = [
         { path: '/parent/dashboard', label: 'Tổng quan', icon: <Home size={20} /> },
         { path: '/parent/schedule', label: 'Lịch học con', icon: <Calendar size={20} /> },
+        { path: '/parent/notifications', label: 'Notifications', icon: <Bell size={20} /> },
     ];
 
     const handleLogout = () => {
-        localStorage.removeItem('user');
+        authService.logout();
         window.location.href = '/login';
     };
 

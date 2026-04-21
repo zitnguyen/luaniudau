@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Download, Search, ChevronLeft, ChevronRight, Edit, Trash2, RotateCw, DollarSign, Calendar, BookOpen, User, MoreVertical, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Plus, Download, Search, ChevronLeft, ChevronRight, Edit, Trash2, RotateCw, DollarSign, Calendar, BookOpen, User, MoreVertical, CheckCircle, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import enrollmentService from '../../../services/enrollmentService';
 import financeService from '../../../services/financeService';
+import TableSkeleton from '../../../components/ui/TableSkeleton';
+import useUndoDelete from '../../../hooks/useUndoDelete';
 
 const EnrollmentList = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [enrollments, setEnrollments] = useState([]);
     const [filteredEnrollments, setFilteredEnrollments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -13,9 +18,16 @@ const EnrollmentList = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [highlightedRowId, setHighlightedRowId] = useState(null);
+    const { scheduleUndoDelete } = useUndoDelete();
     
     // State for delete confirmation
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const getStudentDisplayName = (student) => {
+        if (!student) return "Deleted Student";
+        if (student.isDeleted) return "Deleted Student";
+        return student.fullName || "Deleted Student";
+    };
 
     // Fetch enrollments
     useEffect(() => {
@@ -26,6 +38,15 @@ const EnrollmentList = () => {
     useEffect(() => {
         applyFilters();
     }, [enrollments, searchTerm]);
+
+    useEffect(() => {
+        const updatedId = location.state?.updatedEnrollmentId;
+        if (!updatedId) return;
+        setHighlightedRowId(updatedId);
+        toast.success("✔ Cập nhật thành công", { icon: <CheckCircle2 size={16} /> });
+        const timeout = setTimeout(() => setHighlightedRowId(null), 2500);
+        return () => clearTimeout(timeout);
+    }, [location.state?.updatedEnrollmentId, location.state?.updatedAt]);
 
     const fetchEnrollments = async () => {
         try {
@@ -48,7 +69,7 @@ const EnrollmentList = () => {
     const applyFilters = () => {
         let filtered = enrollments.filter(item => {
             const term = searchTerm.toLowerCase();
-            const studentName = item.studentId?.fullName?.toLowerCase() || '';
+            const studentName = getStudentDisplayName(item.studentId).toLowerCase();
             const className = item.classId?.className?.toLowerCase() || '';
             return studentName.includes(term) || className.includes(term);
         });
@@ -57,26 +78,32 @@ const EnrollmentList = () => {
     };
 
     const handleDelete = async (id) => {
-        try {
-            await enrollmentService.delete(id);
-            setEnrollments(prev => prev.filter(e => e._id !== id));
-            setDeleteConfirm(null);
-        } catch (err) {
-            console.error("Error deleting enrollment:", err);
-            alert('Lỗi khi xóa bản ghi');
-        }
+        const deletingEnrollment = enrollments.find((e) => e._id === id);
+        if (!deletingEnrollment) return;
+        setDeleteConfirm(null);
+        scheduleUndoDelete({
+            id,
+            item: deletingEnrollment,
+            removeOptimistic: () => setEnrollments((prev) => prev.filter((e) => e._id !== id)),
+            restoreOptimistic: (enrollment) => setEnrollments((prev) => [enrollment, ...prev]),
+            commitDelete: () => enrollmentService.delete(id),
+            pendingMessage: "Đã xóa ghi danh — Hoàn tác?",
+            successMessage: "✔ Xóa ghi danh thành công",
+            errorMessage: "Lỗi khi xóa bản ghi",
+        });
     };
 
     const handlePayment = async (enrollmentId) => {
-        if (!window.confirm("Xác nhận đã thu tiền học phí?")) return;
         try {
             await financeService.payTuition(enrollmentId);
             // Refresh list
             fetchEnrollments();
-            alert("Đã thanh toán thành công!");
+            setHighlightedRowId(enrollmentId);
+            toast.success("✔ Đã thanh toán thành công", { icon: <CheckCircle2 size={16} /> });
+            setTimeout(() => setHighlightedRowId(null), 2500);
         } catch (err) {
             console.error("Error paying tuition", err);
-            alert("Lỗi khi thanh toán: " + err.message);
+            toast.error("Lỗi khi thanh toán: " + (err?.response?.data?.message || err.message));
         }
     };
 
@@ -88,7 +115,7 @@ const EnrollmentList = () => {
         // Simple CSV export
         const headers = ['Học viên', 'Lớp', 'Ngày đăng ký', 'Học phí', 'Trạng thái'];
         const rows = filteredEnrollments.map(e => [
-            e.studentId?.fullName || 'N/A',
+            getStudentDisplayName(e.studentId),
             e.classId?.className || 'N/A',
             e.enrollmentDate ? new Date(e.enrollmentDate).toLocaleDateString('vi-VN') : 'N/A',
             e.feeAmount || 0,
@@ -162,9 +189,12 @@ const EnrollmentList = () => {
             {/* Table Container */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-                        <Loader2 className="animate-spin mb-3 text-primary" size={32} />
-                        <span>Đang tải dữ liệu...</span>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <tbody>
+                                <TableSkeleton rows={7} cols={6} />
+                            </tbody>
+                        </table>
                     </div>
                 ) : filteredEnrollments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-gray-500 bg-gray-50/50">
@@ -188,15 +218,26 @@ const EnrollmentList = () => {
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {currentItems.map((item) => (
-                                    <tr key={item._id} className="hover:bg-gray-50 transition-colors group">
+                                    <motion.tr
+                                        key={item._id}
+                                        initial={{ opacity: 0.5, scale: 0.98 }}
+                                        animate={{
+                                            opacity: 1,
+                                            scale: 1,
+                                            backgroundColor:
+                                                highlightedRowId === item._id ? "rgb(240 253 244)" : "rgb(255 255 255)",
+                                        }}
+                                        transition={{ duration: 0.28, ease: "easeOut" }}
+                                        className="hover:bg-gray-50 transition-colors group"
+                                    >
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center gap-3">
                                                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-semibold text-sm">
-                                                    {(item.studentId?.fullName || "A").charAt(0).toUpperCase()}
+                                                    {(getStudentDisplayName(item.studentId) || "D").charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
                                                     <div className="text-sm font-semibold text-gray-900">
-                                                        {item.studentId?.fullName || "N/A"}
+                                                        {getStudentDisplayName(item.studentId)}
                                                     </div>
                                                     <div className="text-xs text-gray-500 mt-0.5">
                                                         ID: {item.studentId?.studentId || item.studentId?._id?.slice(-6)}
@@ -232,7 +273,7 @@ const EnrollmentList = () => {
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 {item.paymentStatus !== 'paid' && (
                                                     <button 
-                                                        onClick={() => handlePayment(item.enrollmentId)}
+                                                        onClick={() => handlePayment(item.enrollmentId || item._id)}
                                                         className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                                         title="Thanh toán ngay"
                                                     >
@@ -278,7 +319,7 @@ const EnrollmentList = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                    </tr>
+                                    </motion.tr>
                                 ))}
                             </tbody>
                         </table>

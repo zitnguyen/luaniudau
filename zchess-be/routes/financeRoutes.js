@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const financeController = require("../controllers/financeController");
+const { protect, authorize } = require("../middleware/authMiddleware");
+
+router.use(protect);
+router.use(authorize("Admin"));
 
 router.get("/stats", financeController.getFinanceStats);
 router.get("/chart", financeController.getFinanceChartData);

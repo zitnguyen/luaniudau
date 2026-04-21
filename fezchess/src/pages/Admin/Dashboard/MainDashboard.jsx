@@ -23,6 +23,7 @@ import {
 import studentService from "../../../services/studentService";
 import enrollmentService from "../../../services/enrollmentService";
 import financeService from "../../../services/financeService";
+import { getSkillLevelLabel } from "../../../utils/studentLevel";
 
 const MainDashboard = () => {
   const [totalStudents, setTotalStudents] = useState(0);
@@ -45,7 +46,7 @@ const MainDashboard = () => {
     try {
       // 1. Fetch Students
       const studentsResponse = await studentService.getAll();
-      const students = studentsResponse || [];
+      const students = Array.isArray(studentsResponse) ? studentsResponse : [];
       setTotalStudents(students.length);
 
       // Time variables
@@ -71,7 +72,8 @@ const MainDashboard = () => {
       }
 
       // 2. Fetch Enrollments
-      const enrollments = await enrollmentService.getAll();
+      const enrollmentsResponse = await enrollmentService.getAll();
+      const enrollments = Array.isArray(enrollmentsResponse) ? enrollmentsResponse : [];
       
       const enrollmentsThisMonth = enrollments.filter(e => {
           const d = new Date(e.enrollmentDate);
@@ -104,7 +106,7 @@ const MainDashboard = () => {
       if (students.length > 0) {
         const levelCounts = {};
         students.forEach(s => {
-           const lvl = s.skillLevel || 'Chưa xếp hạng';
+           const lvl = getSkillLevelLabel(s.skillLevel);
            levelCounts[lvl] = (levelCounts[lvl] || 0) + 1;
         });
 
@@ -123,18 +125,30 @@ const MainDashboard = () => {
 
       // 5. Finance Stats & Chart via Service
       const financeStatsRes = await financeService.getFinanceStats();
-      if (financeStatsRes.success && financeStatsRes.data.length > 0) {
-          setTotalRevenue(financeStatsRes.data[0].value);
-          setRevenueGrowth(financeStatsRes.data[0].change);
+      const financeStats = Array.isArray(financeStatsRes?.data)
+        ? financeStatsRes.data
+        : Array.isArray(financeStatsRes)
+          ? financeStatsRes
+          : [];
+      if (financeStats.length > 0) {
+          setTotalRevenue(financeStats[0].value || 0);
+          setRevenueGrowth(financeStats[0].change || "0%");
       }
 
       const financeChartRes = await financeService.getFinanceChart();
-      if (financeChartRes.success) {
-          const mappedChartData = financeChartRes.data.map(item => ({
+      const financeChart = Array.isArray(financeChartRes?.data)
+        ? financeChartRes.data
+        : Array.isArray(financeChartRes)
+          ? financeChartRes
+          : [];
+      if (financeChart.length > 0) {
+          const mappedChartData = financeChart.map(item => ({
               name: item.name,
-              value: item.income
+              value: item.income || item.value || 0
           }));
           setRevenueData(mappedChartData);
+      } else {
+          setRevenueData([]);
       }
 
     } catch (err) {

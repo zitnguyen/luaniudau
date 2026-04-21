@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, User, Mail, Phone, Lock, Award, Briefcase, GraduationCap, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Lock, Award, Briefcase, GraduationCap, Save, Loader2, ImagePlus } from 'lucide-react';
 import teacherService from '../../../services/teacherService';
 
 const TeacherForm = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const formRef = useRef(null);
+    const fileInputRef = useRef(null);
     const isEditMode = !!id;
 
     const [loading, setLoading] = useState(isEditMode);
     const [submitting, setSubmitting] = useState(false);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [error, setError] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState('');
     const [formData, setFormData] = useState({
         username: '',
         fullName: '',
@@ -21,6 +24,7 @@ const TeacherForm = () => {
         specialization: '',
         experienceYears: '',
         certification: '',
+        avatarUrl: '',
         role: 'Teacher'
     });
 
@@ -43,8 +47,10 @@ const TeacherForm = () => {
                 specialization: String(response.specialization || ''),
                 experienceYears: response.experienceYears ? String(response.experienceYears) : '',
                 certification: String(response.certification || ''),
+                avatarUrl: String(response.avatarUrl || ''),
                 role: response.role || 'Teacher'
             });
+            setPreviewUrl(String(response.avatarUrl || ''));
         } catch (err) {
             setError('Lỗi khi tải dữ liệu giáo viên');
             console.error('Error fetching teacher:', err);
@@ -59,6 +65,43 @@ const TeacherForm = () => {
             ...prev,
             [name]: value
         }));
+    };
+
+    const validateImageFile = (file) => {
+        if (!file) return "Vui lòng chọn ảnh";
+        const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+        if (!validTypes.includes(file.type)) {
+            return "Chỉ hỗ trợ ảnh JPG/PNG";
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            return "Kích thước ảnh tối đa 2MB";
+        }
+        return "";
+    };
+
+    const handleAvatarPick = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const validationError = validateImageFile(file);
+        if (validationError) {
+            setError(validationError);
+            e.target.value = '';
+            return;
+        }
+
+        const localPreview = URL.createObjectURL(file);
+        setPreviewUrl(localPreview);
+        setError(null);
+
+        try {
+            setUploadingAvatar(true);
+            const res = await teacherService.uploadAvatar(file);
+            setFormData((prev) => ({ ...prev, avatarUrl: String(res?.url || '') }));
+        } catch (err) {
+            setError(err?.response?.data?.message || 'Upload ảnh thất bại');
+        } finally {
+            setUploadingAvatar(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -99,12 +142,19 @@ const TeacherForm = () => {
                 certification: formData.certification?.trim()
             };
 
+            let savedId = id;
             if (isEditMode) {
                 await teacherService.update(id, cleanData);
             } else {
-                await teacherService.create(cleanData);
+                const created = await teacherService.create(cleanData);
+                savedId = created?._id;
             }
-            navigate('/teachers');
+            navigate('/admin/teachers', {
+                state: {
+                    updatedTeacherId: savedId,
+                    updatedAt: Date.now(),
+                },
+            });
         } catch (err) {
             console.error('Error saving teacher:', err);
             setError(err.response?.data?.message || 'Lỗi khi lưu dữ liệu: ' + err.message);
@@ -128,7 +178,7 @@ const TeacherForm = () => {
             <div className="flex items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex items-center gap-4">
                     <button 
-                        onClick={() => navigate('/teachers')}
+                        onClick={() => navigate('/admin/teachers')}
                         className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
                     >
                         <ArrowLeft size={24} />
@@ -202,6 +252,44 @@ const TeacherForm = () => {
                                     </div>
                                 </div>
                             )}
+
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Avatar</label>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-20 h-20 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center">
+                                        {previewUrl || formData.avatarUrl ? (
+                                            <img
+                                                src={previewUrl || formData.avatarUrl}
+                                                alt="Teacher avatar preview"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="text-lg font-bold text-gray-500">
+                                                {(formData.fullName || formData.username || 'T').charAt(0).toUpperCase()}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/jpg"
+                                            onChange={handleAvatarPick}
+                                            className="hidden"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={uploadingAvatar}
+                                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-60"
+                                        >
+                                            {uploadingAvatar ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+                                            {uploadingAvatar ? 'Đang upload...' : 'Chọn ảnh'}
+                                        </button>
+                                        <p className="text-xs text-gray-500">JPG/PNG, tối đa 2MB. Ảnh được upload trước khi lưu giáo viên.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -293,7 +381,7 @@ const TeacherForm = () => {
                     <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-50">
                         <button
                             type="button"
-                            onClick={() => navigate('/teachers')}
+                            onClick={() => navigate('/admin/teachers')}
                             className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
                         >
                             Hủy

@@ -1,14 +1,16 @@
 import axiosClient from '../api/axiosClient';
 
 const postService = {
+  normalizeListResponse: (response) => {
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response?.posts)) return response.posts;
+    return [];
+  },
+
   // Public
   getPublishedPosts: async (params) => {
-    // Endpoint: /api/posts/public (assuming this exists or just /posts with filter)
-    // Checking server.js -> postRoutes -> router.get("/", postController.getAllPosts)
-    // We should probably filter by isPublished=true in query if controller supports it,
-    // or use a specific public endpoint if available.
-    // Based on previous analysis, we likely use /posts
-    return await axiosClient.get('/posts', { params: { ...params, isPublished: true } });
+    const data = await axiosClient.get('/posts', { params: { ...params, isPublished: true } });
+    return postService.normalizeListResponse(data);
   },
 
   getPostBySlug: async (slug) => {
@@ -17,7 +19,8 @@ const postService = {
 
   // Admin / Protected
   getAllPosts: async () => {
-    return await axiosClient.get('/posts');
+    const data = await axiosClient.get('/posts');
+    return postService.normalizeListResponse(data);
   },
 
   createPost: async (postData) => {

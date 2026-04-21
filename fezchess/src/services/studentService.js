@@ -1,23 +1,36 @@
 import axiosClient from "../api/axiosClient";
 
+const unwrapData = (response) => {
+  if (response && typeof response === "object" && "success" in response) {
+    return response.data;
+  }
+  return response;
+};
+
 const studentService = {
-  getAll: (params) => {
-    return axiosClient.get("/students", { params });
+  getAll: async (params) => {
+    const response = await axiosClient.get("/students", { params });
+    return unwrapData(response) || [];
   },
-  getById: (id) => {
-    return axiosClient.get(`/students/${id}`);
+  getById: async (id) => {
+    const response = await axiosClient.get(`/students/${id}`);
+    return unwrapData(response);
   },
-  create: (data) => {
-    return axiosClient.post("/students/", data);
+  create: async (data) => {
+    const response = await axiosClient.post("/students", data);
+    return unwrapData(response);
   },
-  update: (id, data) => {
-    return axiosClient.put(`/students/${id}`, data);
+  update: async (id, data) => {
+    const response = await axiosClient.put(`/students/${id}`, data);
+    return unwrapData(response);
   },
-  delete: (id) => {
-    return axiosClient.delete(`/students/${id}`);
+  delete: async (id) => {
+    const response = await axiosClient.delete(`/students/${id}`);
+    return unwrapData(response);
   },
-  getByParentId: (parentId) => {
-    return axiosClient.get(`/students/parent/${parentId}`);
+  getByParentId: async (parentId) => {
+    const response = await axiosClient.get(`/students/parent/${parentId}`);
+    return unwrapData(response) || [];
   },
 };
 

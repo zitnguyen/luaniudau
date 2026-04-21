@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import courseService from '../../services/courseService';
+import reviewService from '../../services/reviewService';
 // import orderService from '../../services/orderService';
 import { PlayCircle, Clock, FileText, CheckCircle, User, Star } from 'lucide-react';
 
@@ -9,7 +10,10 @@ const CourseDetail = () => {
     const navigate = useNavigate();
     const [course, setCourse] = useState(null);
     const [curriculum, setCurriculum] = useState([]);
+    const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
     const user = JSON.parse(localStorage.getItem('user'));
 
     useEffect(() => {
@@ -18,6 +22,10 @@ const CourseDetail = () => {
                 const res = await courseService.getCourseBySlug(slug);
                 setCourse(res.course);
                 setCurriculum(res.curriculum);
+                if (res.course?._id) {
+                    const reviewData = await reviewService.getByCourseId(res.course._id);
+                    setReviews(Array.isArray(reviewData) ? reviewData : []);
+                }
             } catch (error) {
                 console.error("Failed to fetch course", error);
             } finally {
@@ -34,6 +42,31 @@ const CourseDetail = () => {
         }
         // Logic for enrollment/purchase will go here
         alert("Tính năng thanh toán đang được hoàn thiện. Vui lòng liên hệ Admin để đăng ký.");
+    };
+
+    const handleSubmitReview = async (e) => {
+        e.preventDefault();
+        if (!user) {
+            navigate('/login', { state: { from: `/courses/${slug}` } });
+            return;
+        }
+        if (!course?._id) return;
+
+        try {
+            setSubmittingReview(true);
+            await reviewService.create({
+                courseId: course._id,
+                rating: Number(reviewForm.rating),
+                comment: reviewForm.comment,
+            });
+            const reviewData = await reviewService.getByCourseId(course._id);
+            setReviews(Array.isArray(reviewData) ? reviewData : []);
+            setReviewForm({ rating: 5, comment: "" });
+        } catch (error) {
+            alert(error?.response?.data?.message || "Không thể gửi đánh giá");
+        } finally {
+            setSubmittingReview(false);
+        }
     };
 
     if (loading) return <div className="text-center py-20">Đang tải...</div>;
@@ -135,7 +168,7 @@ const CourseDetail = () => {
                                     <span className="text-sm text-gray-500">{chapter.lessons?.length} bài học</span>
                                 </div>
                                 <div>
-                                    {chapter.lessons?.map((lesson, lIndex) => (
+                                    {chapter.lessons?.map((lesson) => (
                                         <div 
                                             key={lesson._id} 
                                             onClick={() => navigate(`/learning/${slug}/${lesson._id}`)}
@@ -179,6 +212,61 @@ const CourseDetail = () => {
                                     Đội ngũ giảng viên, kiện tướng giàu kinh nghiệm tại Daisy Chess.
                                 </p>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Reviews */}
+                    <div className="mt-12">
+                        <h2 className="text-2xl font-bold mb-6 font-heading text-gray-900">Đánh giá học viên</h2>
+
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
+                            <form onSubmit={handleSubmitReview} className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <select
+                                        value={reviewForm.rating}
+                                        onChange={(e) => setReviewForm((prev) => ({ ...prev, rating: e.target.value }))}
+                                        className="border border-gray-300 rounded-lg px-3 py-2"
+                                    >
+                                        <option value={5}>5 sao</option>
+                                        <option value={4}>4 sao</option>
+                                        <option value={3}>3 sao</option>
+                                        <option value={2}>2 sao</option>
+                                        <option value={1}>1 sao</option>
+                                    </select>
+                                    <input
+                                        type="text"
+                                        placeholder="Nhận xét của bạn..."
+                                        value={reviewForm.comment}
+                                        onChange={(e) => setReviewForm((prev) => ({ ...prev, comment: e.target.value }))}
+                                        className="md:col-span-3 border border-gray-300 rounded-lg px-3 py-2"
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={submittingReview}
+                                    className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-70"
+                                >
+                                    {submittingReview ? "Đang gửi..." : "Gửi đánh giá"}
+                                </button>
+                            </form>
+                        </div>
+
+                        <div className="space-y-4">
+                            {reviews.length === 0 ? (
+                                <div className="text-gray-500 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                    Chưa có đánh giá nào cho khóa học này.
+                                </div>
+                            ) : (
+                                reviews.map((r) => (
+                                    <div key={r._id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="font-semibold text-gray-900">{r.userId?.fullName || "Học viên"}</div>
+                                            <div className="text-yellow-500 font-semibold">{'★'.repeat(r.rating)}</div>
+                                        </div>
+                                        <div className="text-gray-700">{r.comment || "Không có nhận xét."}</div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>

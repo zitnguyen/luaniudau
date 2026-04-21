@@ -30,6 +30,11 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       trim: true,
     },
+    avatarUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
 
     password: {
       type: String,
@@ -38,7 +43,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["Admin", "Parent", "Student"],
+      enum: ["Admin", "Parent", "Student", "Teacher"],
       default: "Parent",
     },
   },
@@ -50,6 +55,7 @@ const userSchema = new mongoose.Schema(
 /// 🔐 HASH PASSWORD – CÁCH 1 (KHÔNG next)
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
+  if (typeof this.password === "string" && this.password.startsWith("$2")) return;
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);

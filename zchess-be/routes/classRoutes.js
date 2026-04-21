@@ -8,6 +8,12 @@ const { protect, authorize } = require("../middleware/authMiddleware");
 
 // Public
 router.get("/", classController.getAllClasses);
+router.get(
+  "/teacher/:teacherId",
+  protect,
+  authorize("Admin", "Teacher"),
+  classController.getClassesByTeacher,
+);
 router.get("/:id", classController.getClassById);
 
 // Admin Only

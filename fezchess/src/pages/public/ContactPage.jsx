@@ -1,8 +1,16 @@
 import React, { useState } from "react";
 import axiosClient from "../../api/axiosClient";
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle } from "lucide-react";
+import { useSystemSettings } from "../../context/SystemSettingsContext";
 
 const ContactPage = () => {
+  const { settings } = useSystemSettings();
+  const mapLink = "https://maps.app.goo.gl/QG3Rm7K3hpk28azF7";
+  const mapQueryAddress =
+    settings?.address || "1181/26 KDC Lê Văn Lương, Xã Nhà Bè, TP. Hồ Chí Minh";
+  const mapEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(
+    mapQueryAddress,
+  )}&output=embed`;
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -64,9 +72,7 @@ const ContactPage = () => {
                     Địa chỉ
                   </h3>
                   <p className="text-gray-600">
-                    1181/26, KDC Lê Văn Lương,
-                    <br />
-                    Xã Nhà Bè, TP. Hồ Chí Minh
+                    {settings?.address || "1181/26, KDC Lê Văn Lương, Xã Nhà Bè, TP. Hồ Chí Minh"}
                   </p>
                 </div>
               </div>
@@ -79,7 +85,7 @@ const ContactPage = () => {
                   <h3 className="text-lg font-bold text-gray-900 mb-1">
                     Điện thoại
                   </h3>
-                  <p className="text-gray-600">0934 830 045</p>
+                  <p className="text-gray-600">{settings?.hotline || "0934 830 045"}</p>
                   <p className="text-gray-500 text-sm mt-1">Hỗ trợ 24/7</p>
                 </div>
               </div>
@@ -92,7 +98,7 @@ const ContactPage = () => {
                   <h3 className="text-lg font-bold text-gray-900 mb-1">
                     Email
                   </h3>
-                  <p className="text-gray-600">zchessvn@gmail.com</p>
+                  <p className="text-gray-600">{settings?.email || "zchessvn@gmail.com"}</p>
                 </div>
               </div>
 
@@ -104,16 +110,31 @@ const ContactPage = () => {
                   <h3 className="text-lg font-bold text-gray-900 mb-1">
                     Giờ làm việc
                   </h3>
-                  <p className="text-gray-600">
-                    Thứ 2 - Chủ Nhật: 8:00 - 21:00
-                  </p>
+                  <p className="text-gray-600">{settings?.workingHours || "Thứ 2 - Chủ Nhật: 8:00 - 21:00"}</p>
                 </div>
               </div>
             </div>
 
             {/* Map placeholder */}
-            <div className="mt-10 h-64 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 border border-gray-200">
-              [Bản đồ Google Maps sẽ được tích hợp tại đây]
+            <div className="mt-10 rounded-xl overflow-hidden border border-gray-200">
+              <iframe
+                title="Google Maps"
+                src={mapEmbedSrc}
+                width="100%"
+                height="320"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+              <div className="bg-gray-50 px-4 py-2 border-t border-gray-200 text-sm">
+                <a
+                  href={mapLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Mở Google Maps
+                </a>
+              </div>
             </div>
           </div>
 

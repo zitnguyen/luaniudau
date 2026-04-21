@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Download, Search, ChevronDown, ChevronLeft, ChevronRight, Edit, Trash2, RotateCw, User, Mail, Phone, Award, Briefcase, GraduationCap, Loader2 } from 'lucide-react';
+import { Plus, Download, Search, ChevronDown, ChevronLeft, ChevronRight, Edit, Trash2, RotateCw, User, Mail, Phone, Award, Briefcase, GraduationCap, CheckCircle2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import teacherService from '../../../services/teacherService';
+import TableSkeleton from '../../../components/ui/TableSkeleton';
+import useUndoDelete from '../../../hooks/useUndoDelete';
 
 const TeacherList = () => {
     const navigate = useNavigate();
@@ -16,6 +20,8 @@ const TeacherList = () => {
     const [itemsPerPage] = useState(10);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [highlightedRowId, setHighlightedRowId] = useState(null);
+    const { scheduleUndoDelete } = useUndoDelete();
 
     // Fetch teachers when component mounts or when returning to this page
     useEffect(() => {
@@ -27,10 +33,19 @@ const TeacherList = () => {
         applyFilters();
     }, [teachers, searchTerm, filterRole]);
 
+    useEffect(() => {
+        const updatedId = location.state?.updatedTeacher?._id || location.state?.updatedTeacherId;
+        if (!updatedId) return;
+        setHighlightedRowId(updatedId);
+        toast.success('✔ Cập nhật thành công', { icon: <CheckCircle2 size={16} /> });
+        const timeout = setTimeout(() => setHighlightedRowId(null), 2500);
+        return () => clearTimeout(timeout);
+    }, [location.state?.updatedTeacher?._id, location.state?.updatedTeacherId, location.state?.updatedAt]);
+
     const fetchTeachers = async () => {
         try {
             setLoading(true);
-            const data = await teacherService.getAll({ role: 'Teacher' });
+            const data = await teacherService.getAll();
             const userList = Array.isArray(data) ? data : (data.users || []);
             setTeachers(userList);
         } catch (err) {
@@ -59,14 +74,19 @@ const TeacherList = () => {
     };
 
     const handleDelete = async (teacherId) => {
-        try {
-            await teacherService.delete(teacherId);
-            setTeachers(teachers.filter(t => t._id !== teacherId));
-            setDeleteConfirm(null);
-        } catch (err) {
-            console.error('Error deleting teacher:', err);
-            setError('Lỗi khi xóa giáo viên');
-        }
+        const deletingTeacher = teachers.find((t) => t._id === teacherId);
+        if (!deletingTeacher) return;
+        setDeleteConfirm(null);
+        scheduleUndoDelete({
+            id: teacherId,
+            item: deletingTeacher,
+            removeOptimistic: () => setTeachers((prev) => prev.filter((t) => t._id !== teacherId)),
+            restoreOptimistic: (teacher) => setTeachers((prev) => [teacher, ...prev]),
+            commitDelete: () => teacherService.delete(teacherId),
+            pendingMessage: "Đã xóa giáo viên — Hoàn tác?",
+            successMessage: "✔ Xóa giáo viên thành công",
+            errorMessage: "Lỗi khi xóa giáo viên",
+        });
     };
 
     const handleRefresh = async () => {
@@ -145,7 +165,7 @@ const TeacherList = () => {
                 <span>Xuất Excel</span>
             </button>
             <button 
-                onClick={() => navigate('/teachers/new')}
+                onClick={() => navigate('/admin/teachers/new')}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
             >
                 <Plus size={18} />
@@ -189,10 +209,11 @@ const TeacherList = () => {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
              {loading ? (
-                <div className="flex justify-center items-center py-12 text-gray-500">
-                    <Loader2 className="animate-spin mr-2" size={20}/>
-                    <span>Đang tải dữ liệu...</span>
-                </div>
+                <table className="min-w-full divide-y divide-gray-200">
+                    <tbody>
+                        <TableSkeleton rows={6} cols={6} />
+                    </tbody>
+                </table>
             ) : filteredTeachers.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                     {teachers.length === 0 ? 'Chưa có giáo viên nào.' : 'Không tìm thấy giáo viên phù hợp.'}
@@ -211,12 +232,31 @@ const TeacherList = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                     {currentItems.map((teacher, index) => (
-                        <tr key={teacher._id || teacher.id} className="hover:bg-gray-50 transition-colors group">
+                        <motion.tr
+                            key={teacher._id || teacher.id}
+                            initial={{ opacity: 0.5, scale: 0.98 }}
+                            animate={{
+                                opacity: 1,
+                                scale: 1,
+                                backgroundColor:
+                                    highlightedRowId === teacher._id ? "rgb(240 253 244)" : "rgb(255 255 255)",
+                            }}
+                            transition={{ duration: 0.28, ease: "easeOut" }}
+                            className="hover:bg-gray-50 transition-colors group"
+                        >
                             <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg">
-                                        {(teacher.fullName || teacher.username || 'T').charAt(0).toUpperCase()}
-                                    </div>
+                                    {teacher.avatarUrl ? (
+                                        <img
+                                            src={teacher.avatarUrl}
+                                            alt={teacher.fullName || teacher.username}
+                                            className="w-10 h-10 rounded-full object-cover border border-gray-100"
+                                        />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg">
+                                            {(teacher.fullName || teacher.username || 'T').charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
                                     <div>
                                         <div className="font-medium text-gray-900">{teacher.fullName || teacher.username}</div>
                                         <div className="text-xs text-gray-500">ID: {teacher._id?.substring(0,6) || index + 1}</div>
@@ -262,7 +302,7 @@ const TeacherList = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button 
-                                        onClick={() => navigate(`/teachers/${teacher._id}/edit`)}
+                                        onClick={() => navigate(`/admin/teachers/${teacher._id}/edit`)}
                                         className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                                         title="Chỉnh sửa"
                                     >
@@ -298,7 +338,7 @@ const TeacherList = () => {
                                     </div>
                                 </div>
                             </td>
-                        </tr>
+                        </motion.tr>
                     ))}
                 </tbody>
             </table>

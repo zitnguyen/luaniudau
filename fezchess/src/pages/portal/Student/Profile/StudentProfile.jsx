@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Camera, Calendar, Mail, Phone, MapPin, User, Lock, RotateCcw, Save } from 'lucide-react';
 import studentService from '../../../../services/studentService';
 import { CURRENT_STUDENT_ID } from '../../../../mockAuth';
+import { getSkillLevelLabel } from '../../../../utils/studentLevel';
 
 const StudentProfile = () => {
     const [student, setStudent] = useState(null);
@@ -66,7 +67,13 @@ const StudentProfile = () => {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F3F4F6', padding: '8px 16px', borderRadius: '8px' }}>
                             <span style={{ width: '20px', display: 'flex', justifyContent: 'center' }}>🎓</span>
-                            <span style={{ fontSize: '14px', fontWeight: '600', color: '#4B5563' }}>Level: <span style={{ color: '#111827' }}>{student.skillLevel || 'N/A'}</span></span>
+                            <span style={{ fontSize: '14px', fontWeight: '600', color: '#4B5563' }}>Level: <span style={{ color: '#111827' }}>{getSkillLevelLabel(student.skillLevel)}</span></span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F3F4F6', padding: '8px 16px', borderRadius: '8px' }}>
+                            <span style={{ width: '20px', display: 'flex', justifyContent: 'center' }}>📘</span>
+                            <span style={{ fontSize: '14px', fontWeight: '600', color: '#4B5563' }}>
+                                Tiến độ: <span style={{ color: '#111827' }}>{student.completedLessons || 0}/{student.totalLessons || 0}</span>
+                            </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F3F4F6', padding: '8px 16px', borderRadius: '8px' }}>
                             <Calendar size={16} color="#6B7280" />

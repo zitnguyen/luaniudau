@@ -1,10 +1,19 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authController");
+const {
+  signinLimiter,
+  signupLimiter,
+  refreshLimiter,
+} = require("../middleware/securityMiddleware");
+const {
+  signinValidation,
+  signupValidation,
+} = require("../middleware/validationMiddleware");
 
-router.post("/signup", authController.signup);
-router.post("/signin", authController.signin);
+router.post("/signup", signupLimiter, signupValidation, authController.signup);
+router.post("/signin", signinLimiter, signinValidation, authController.signin);
 router.post("/signout", authController.signout);
-router.post("/refresh", authController.refresh);
+router.post("/refresh", refreshLimiter, authController.refresh);
 
 module.exports = router;

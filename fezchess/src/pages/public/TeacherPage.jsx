@@ -1,66 +1,27 @@
 import React, { useState, useEffect } from "react";
-import axiosClient from "../../api/axiosClient";
-import { Award, Star } from "lucide-react";
+import teacherService from "../../services/teacherService";
+import { useNavigate } from "react-router-dom";
 
 const TeacherPage = () => {
+  const navigate = useNavigate();
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Since we don't have a public endpoint for teachers yet, we can either:
-    // 1. Create one in userController (getTeachers)
-    // 2. Or filter current users if we have permission (likely not public)
-    // For now, I'll mock the data structurally to match the UI plan,
-    // anticipating the backend endpoint creation or using static data if preferred.
-    // Ideally: axiosClient.get('/users/teachers');
+    const fetchTeachers = async () => {
+      try {
+        setLoading(true);
+        const data = await teacherService.getAll();
+        setTeachers(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to fetch teachers", error);
+        setTeachers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Let's assume we fetch from a new endpoint or use a filtered public list
-    // Note: The previous task didn't explicitly create a public 'get teachers' endpoint.
-    // I'll simulate it for now or try to fetch if available.
-
-    // Use static data for demo purposes as user requested "wow" UI
-    // and we might not have real teacher data populated yet.
-    const demoTeachers = [
-      {
-        _id: "1",
-        fullName: "Nguyễn Thành Luân",
-        specialization: "Grandmaster (GM)",
-        experienceYears: 15,
-        avatar:
-          "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        bio: "Vô địch quốc gia 2020, Huấn luyện viên trưởng đội tuyển trẻ thành phố.",
-      },
-      {
-        _id: "2",
-        fullName: "Trần Thị Kiện Tướng",
-        specialization: "Woman Grandmaster (WGM)",
-        experienceYears: 10,
-        avatar:
-          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        bio: "Chuyên gia khai cuộc và cờ tàn. Đã đào tạo nhiều học viên đạt giải quốc tế.",
-      },
-      {
-        _id: "3",
-        fullName: "Lê master",
-        specialization: "FIDE Master (FM)",
-        experienceYears: 8,
-        avatar:
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        bio: "Phong cách giảng dạy dí dỏm, dễ hiểu. Rất được các bạn nhỏ yêu thích.",
-      },
-      {
-        _id: "4",
-        fullName: "Phạm Huấn Luyện",
-        specialization: "National Master (NM)",
-        experienceYears: 12,
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        bio: "Kinh nghiệm dày dặn trong việc phát hiện và bồi dưỡng tài năng trẻ.",
-      },
-    ];
-
-    setTeachers(demoTeachers);
-    setLoading(false);
+    fetchTeachers();
   }, []);
 
   return (
@@ -78,6 +39,11 @@ const TeacherPage = () => {
       </div>
 
       <div className="container mx-auto px-4 py-16">
+        {loading ? (
+          <div className="text-center text-gray-500">Đang tải danh sách giáo viên...</div>
+        ) : teachers.length === 0 ? (
+          <div className="text-center text-gray-500">Chưa có dữ liệu giáo viên.</div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {teachers.map((teacher) => (
             <div
@@ -86,12 +52,17 @@ const TeacherPage = () => {
             >
               <div className="relative h-64 overflow-hidden bg-gray-200">
                 <img
-                  src={teacher.avatar}
+                  src={
+                    teacher.avatarUrl ||
+                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80"
+                  }
                   alt={teacher.fullName}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
-                  <p className="text-white text-sm">{teacher.bio}</p>
+                  <p className="text-white text-sm">
+                    {teacher.certification || "Giáo viên trung tâm Z Chess"}
+                  </p>
                 </div>
               </div>
 
@@ -100,29 +71,35 @@ const TeacherPage = () => {
                   {teacher.fullName}
                 </h3>
                 <p className="text-primary font-medium mb-3">
-                  {teacher.specialization}
+                  {teacher.specialization || "Giáo viên cờ vua"}
                 </p>
 
                 <div className="flex justify-center items-center gap-4 text-sm text-gray-500 border-t border-gray-100 pt-4">
                   <div className="flex flex-col">
                     <span className="font-bold text-gray-900 text-lg">
-                      {teacher.experienceYears}+
+                      {teacher.experienceYears || 0}+
                     </span>
                     <span>Năm KN</span>
                   </div>
                   <div className="w-px h-8 bg-gray-200"></div>
                   <div className="flex flex-col">
                     <span className="font-bold text-gray-900 text-lg flex items-center justify-center gap-1">
-                      5.0{" "}
-                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                      {teacher.status || "Active"}
                     </span>
-                    <span>Đánh giá</span>
+                    <span>Trạng thái</span>
                   </div>
                 </div>
+                <button
+                  onClick={() => navigate(`/teachers/${teacher._id}`)}
+                  className="mt-4 w-full px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 text-sm font-medium"
+                >
+                  Xem chi tiết
+                </button>
               </div>
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

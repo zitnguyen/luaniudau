@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axiosClient from '../../../api/axiosClient';
+import courseService from '../../../services/courseService';
 import { Save, ArrowLeft, Layout, List } from 'lucide-react';
 import ChapterManager from './components/ChapterManager';
 
@@ -11,6 +11,8 @@ const AdminCourseForm = () => {
 
     const [activeTab, setActiveTab] = useState('info'); // 'info' or 'curriculum'
     const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(false);
+    const [error, setError] = useState('');
     
     // Basic Info State
     const [formData, setFormData] = useState({
@@ -33,40 +35,26 @@ const AdminCourseForm = () => {
 
     const fetchCourse = async () => {
         try {
-            // Need an endpoint that returns course details + chapters + lessons
-             // Reusing the public one for now, but admin usually needs more raw data
-            // If getCourseBySlug is public and filters by published, this might fail for drafts if backend logic is strict.
-            // But let's assume we use ID here.
-            
-            // Wait, we need an admin endpoint to get by ID, or we use the public slug one but that's risky if we change slugs.
-            // Let's rely on courseService.getCourseById(id) which I mocked earlier to use /api/courses/:id
-            // I need to ensure backend supports GET /api/courses/:id
-            
-            const data = await axiosClient.get(`/courses/${id}`);
-            // Note: backend response structure for public might be { course, curriculum }.
-            // Let's assume for admin we might need to adjust or handle "course" wrapper.
-            // If the public endpoint returns { course: {...}, curriculum: [...] }, we need to handle that.
-            // Checking existing controller: getCourseBySlug returns { course, curriculum }.
-            // But GET /:id is not explicitly defined in the provided snippets except update/delete. 
-            // I might need to add GET /:id to controller.
-            
-            // Assuming I will add it or it exists (implicit findById in some frameworks, but Express needs explicit).
-            // I'll fix the backend controller in a moment.
-            
+            setFetching(true);
+            setError('');
+            const data = await courseService.getCourseById(id);
             setFormData({
-                title: data.title || data.course?.title,
-                slug: data.slug || data.course?.slug,
-                description: data.description || data.course?.description,
-                price: data.price || data.course?.price || 0,
-                salePrice: data.salePrice || data.course?.salePrice || 0,
-                level: data.level || data.course?.level,
-                category: data.category || data.course?.category,
-                thumbnail: data.thumbnail || data.course?.thumbnail || '',
-                isPublished: data.isPublished || data.course?.isPublished || false
+                title: data?.title ?? '',
+                slug: data?.slug ?? '',
+                description: data?.description ?? '',
+                price: data?.price ?? 0,
+                salePrice: data?.salePrice ?? 0,
+                level: data?.level ?? 'All Levels',
+                category: data?.category ?? 'General',
+                thumbnail: data?.thumbnail ?? '',
+                isPublished: Boolean(data?.isPublished)
             });
 
         } catch (error) {
             console.error("Error fetching course:", error);
+            setError(error?.response?.data?.message || "Không thể tải dữ liệu khóa học.");
+        } finally {
+            setFetching(false);
         }
     };
 
@@ -91,20 +79,23 @@ const AdminCourseForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setError('');
         try {
             let response;
             if (isEditMode) {
-                response = await axiosClient.put(`/courses/${id}`, formData);
+                response = await courseService.updateCourse(id, formData);
                 alert("Cập nhật thành công!");
             } else {
-                response = await axiosClient.post('/courses', formData);
+                response = await courseService.createCourse(formData);
                 alert("Tạo khóa học thành công! Chuyển sang thêm bài học.");
                 navigate(`/admin/courses/${response._id}/edit`);
                 setActiveTab('curriculum');
             }
         } catch (error) {
             console.error("Error saving course:", error);
-            alert("Lỗi khi lưu khóa học: " + (error.response?.data?.message || error.message));
+            const message = error.response?.data?.message || error.message || "Lỗi khi lưu khóa học";
+            setError(message);
+            alert("Lỗi khi lưu khóa học: " + message);
         } finally {
             setLoading(false);
         }
@@ -129,7 +120,7 @@ const AdminCourseForm = () => {
                     {activeTab === 'info' && (
                         <button 
                             onClick={handleSubmit} 
-                            disabled={loading}
+                            disabled={loading || fetching}
                             className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
                         >
                             <Save className="w-5 h-5" />
@@ -138,6 +129,18 @@ const AdminCourseForm = () => {
                     )}
                 </div>
             </div>
+
+            {error && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+
+            {fetching && (
+                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                    Đang tải dữ liệu khóa học...
+                </div>
+            )}
 
             {/* Tabs */}
             <div className="flex mb-6 bg-white p-1 rounded-xl shadow-sm border border-gray-100 max-w-md">

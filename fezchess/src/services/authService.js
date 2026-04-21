@@ -7,7 +7,13 @@ const authService = {
     // Endpoint: /api/auth/signin
     const response = await axiosClient.post('/auth/signin', credentials);
     if (response) {
-      localStorage.setItem('user', JSON.stringify(response));
+      const { accessToken, ...safeResponse } = response || {};
+      const normalized = {
+        ...safeResponse,
+        _id: safeResponse._id || safeResponse.userId,
+      };
+      localStorage.setItem('user', JSON.stringify(normalized));
+      return normalized;
     }
     return response;
   },
@@ -23,12 +29,19 @@ const authService = {
   },
 
   logout: () => {
+    axiosClient.post('/auth/signout').catch(() => null);
     localStorage.removeItem('user');
   },
 
   getCurrentUser: () => {
     const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    if (!userStr || userStr === "undefined") return null;
+    try {
+      return JSON.parse(userStr);
+    } catch (e) {
+      console.error("Failed to parse current user from localStorage", e);
+      return null;
+    }
   }
 };
 

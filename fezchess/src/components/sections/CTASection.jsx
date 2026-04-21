@@ -45,7 +45,7 @@ const CTASection = () => {
                 transition={{ delay: 0.2 }}
                 className="flex flex-col sm:flex-row gap-4 justify-center"
               >
-                <Link to="/test-register">
+                <Link to="/contact">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}

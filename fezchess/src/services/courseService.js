@@ -8,8 +8,6 @@ const courseService = {
 
   getCourseBySlug: async (slug) => {
     const data = await axiosClient.get(`/courses/${slug}`);
-    // Backend returns course object with 'chapters' field
-    // Frontend expects { course, curriculum }
     return {
         course: data,
         curriculum: data.chapters || []
@@ -26,8 +24,7 @@ const courseService = {
   },
 
   getCourseById: async (id) => {
-      // Adjusted endpoint based on standard REST practices or existing routes
-      return await axiosClient.get(`/courses/${id}`); 
+      return await axiosClient.get(`/courses/id/${id}`); 
   },
 
   // Chapters & Lessons

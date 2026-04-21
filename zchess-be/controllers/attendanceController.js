@@ -1,52 +1,183 @@
 const Attendance = require("../models/Attendance");
+const asyncHandler = require("../middleware/asyncHandler");
+const Class = require("../models/Class");
+const Schedule = require("../models/Schedule");
+const Student = require("../models/Student");
 
-// Create or update attendance for a single student (simplified for model match)
-exports.markAttendance = async (req, res) => {
-  try {
-    const { classId, studentId, date, status, note } = req.body;
+function parseDayAnchor(dateInput) {
+  if (!dateInput) return new Date();
+  const s = String(dateInput).slice(0, 10);
+  const parts = s.split("-");
+  if (parts.length === 3) {
+    const y = Number(parts[0]);
+    const m = Number(parts[1]) - 1;
+    const d = Number(parts[2]);
+    return new Date(y, m, d, 12, 0, 0, 0);
+  }
+  return new Date(dateInput);
+}
 
-    let attendance = await Attendance.findOne({ classId, studentId, date });
+function dayRange(dateInput) {
+  const anchor = parseDayAnchor(dateInput);
+  const start = new Date(anchor);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(anchor);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
 
-    if (attendance) {
-      attendance.status = status;
-      attendance.note = note;
-      await attendance.save();
+async function ensureTeacherOwnsClass(classId, reqUser) {
+  if (!reqUser || reqUser.role !== "Teacher") return true;
+  const ownClass = await Class.exists({ _id: classId, teacherId: reqUser._id });
+  return Boolean(ownClass);
+}
+
+const hasScheduleOnDate = async (studentId, dateInput) => {
+  const schedule = await Schedule.findOne({ studentId }).select("slots");
+  if (!schedule || !Array.isArray(schedule.slots) || schedule.slots.length === 0) {
+    return false;
+  }
+  const dayVal = parseDayAnchor(dateInput).getDay(); // 0..6
+  return schedule.slots.some((slot) => Number(slot?.day) === Number(dayVal));
+};
+
+exports.listAttendance = asyncHandler(async (req, res) => {
+  const filter = {};
+  if (req.query.classId) filter.classId = req.query.classId;
+  if (req.query.studentId) filter.studentId = req.query.studentId;
+  if (req.query.date) {
+    const { start, end } = dayRange(req.query.date);
+    filter.date = { $gte: start, $lte: end };
+  }
+
+  if (req.user.role === "Teacher") {
+    if (filter.classId) {
+      const canAccess = await ensureTeacherOwnsClass(filter.classId, req.user);
+      if (!canAccess) return res.status(403).json({ message: "Forbidden" });
     } else {
-      attendance = new Attendance({
-        classId,
-        studentId,
-        date,
-        status,
-        note
-      });
-      await attendance.save();
+      const classDocs = await Class.find({ teacherId: req.user._id }).select("_id");
+      filter.classId = { $in: classDocs.map((c) => c._id) };
     }
-
-    res.status(201).json(attendance);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
   }
-};
 
-// Get attendance by class
-exports.getClassAttendance = async (req, res) => {
-  try {
-    const { classId } = req.params;
-    const attendance = await Attendance.find({ classId }).populate("studentId", "fullName");
-    res.json(attendance);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+  const attendance = await Attendance.find(filter)
+    .populate("studentId", "fullName studentId")
+    .populate("classId", "className");
 
-// Update specific attendance record
-exports.updateAttendance = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const attendance = await Attendance.findByIdAndUpdate(id, req.body, { new: true });
-    if (!attendance) return res.status(404).json({ message: "Not found" });
-    res.json(attendance);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  res.json(attendance);
+});
+
+exports.markAttendance = asyncHandler(async (req, res) => {
+  const { classId, studentId, date, status, note } = req.body;
+  if (!classId || !studentId || !date || !status) {
+    return res.status(400).json({ message: "Thiếu dữ liệu điểm danh bắt buộc" });
   }
-};
+  const canAccess = await ensureTeacherOwnsClass(classId, req.user);
+  if (!canAccess) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  const studentExists = await Student.exists({
+    _id: studentId,
+    isDeleted: { $ne: true },
+  });
+  if (!studentExists) {
+    return res.status(404).json({ message: "Học viên không tồn tại" });
+  }
+
+  const hasSchedule = await hasScheduleOnDate(studentId, date);
+  if (!hasSchedule) {
+    return res
+      .status(400)
+      .json({ message: "Học viên không có lịch học trong ngày được chọn" });
+  }
+
+  const anchor = parseDayAnchor(date);
+  const { start, end } = dayRange(date);
+
+  let attendance = await Attendance.findOne({
+    classId,
+    studentId,
+    date: { $gte: start, $lte: end },
+  });
+
+  if (attendance) {
+    const prevStatus = attendance.status;
+    attendance.status = status;
+    attendance.note = note;
+    attendance.date = anchor;
+    await attendance.save();
+
+    if (prevStatus !== status) {
+      if (status === "present") {
+        await Student.findByIdAndUpdate(studentId, {
+          $inc: { totalSessions: 1, completedLessons: 1 },
+        });
+      } else if (prevStatus === "present" && status === "absent") {
+        const studentDoc = await Student.findById(studentId).select(
+          "totalSessions completedLessons",
+        );
+        if (studentDoc) {
+          studentDoc.totalSessions = Math.max((studentDoc.totalSessions || 0) - 1, 0);
+          studentDoc.completedLessons = Math.max(
+            (studentDoc.completedLessons || 0) - 1,
+            0,
+          );
+          await studentDoc.save();
+        }
+      }
+    }
+  } else {
+    attendance = new Attendance({
+      classId,
+      studentId,
+      date: anchor,
+      status,
+      note,
+    });
+    await attendance.save();
+    if (status === "present") {
+      await Student.findByIdAndUpdate(studentId, {
+        $inc: { totalSessions: 1, completedLessons: 1 },
+      });
+    }
+  }
+
+  res.status(201).json(attendance);
+});
+
+exports.getClassAttendance = asyncHandler(async (req, res) => {
+  const { classId } = req.params;
+  const canAccess = await ensureTeacherOwnsClass(classId, req.user);
+  if (!canAccess) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  const filter = { classId };
+  if (req.query.date) {
+    const { start, end } = dayRange(req.query.date);
+    filter.date = { $gte: start, $lte: end };
+  }
+
+  const attendance = await Attendance.find(filter).populate(
+    "studentId",
+    "fullName studentId",
+  );
+  res.json(attendance);
+});
+
+exports.updateAttendance = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const existing = await Attendance.findById(id).select("classId");
+  if (!existing) return res.status(404).json({ message: "Not found" });
+
+  const canAccess = await ensureTeacherOwnsClass(existing.classId, req.user);
+  if (!canAccess) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  const attendance = await Attendance.findByIdAndUpdate(id, req.body, {
+    new: true,
+  });
+  res.json(attendance);
+});

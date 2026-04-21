@@ -1,18 +1,44 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Search, Phone, Mail, MapPin, Loader2, User } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Plus, Edit, Trash2, Search, Phone, Mail, MapPin, User, CheckCircle2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 import parentService from "../../../services/parentService";
+import TableSkeleton from "../../../components/ui/TableSkeleton";
+import useUndoDelete from "../../../hooks/useUndoDelete";
 
 const ParentList = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [parents, setParents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [highlightedRowId, setHighlightedRowId] = useState(null);
+  const { scheduleUndoDelete } = useUndoDelete();
 
   useEffect(() => {
     fetchParents();
   }, []);
+
+  useEffect(() => {
+    const updatedParent = location.state?.updatedParent;
+    if (!updatedParent?._id) return;
+
+    setParents((prevParents) => {
+      const index = prevParents.findIndex((item) => item._id === updatedParent._id);
+      if (index === -1) {
+        return [updatedParent, ...prevParents];
+      }
+      const next = [...prevParents];
+      next[index] = { ...next[index], ...updatedParent };
+      return next;
+    });
+    setHighlightedRowId(updatedParent._id);
+    toast.success("✔ Cập nhật thành công", { icon: <CheckCircle2 size={16} /> });
+    const timeout = setTimeout(() => setHighlightedRowId(null), 2500);
+    return () => clearTimeout(timeout);
+  }, [location.state?.updatedAt]);
 
   const fetchParents = async () => {
     try {
@@ -26,15 +52,20 @@ const ParentList = () => {
   };
 
   const handleDelete = async (id) => {
-      try {
-          await parentService.delete(id);
-          setParents(parents.filter(p => p._id !== id));
-          setDeleteConfirm(null);
-      } catch (error) {
-          console.error("Error deleting parent:", error);
-          alert("Lỗi khi xóa phụ huynh");
-      }
-  }
+    const deletingParent = parents.find((p) => p._id === id);
+    if (!deletingParent) return;
+    setDeleteConfirm(null);
+    scheduleUndoDelete({
+      id,
+      item: deletingParent,
+      removeOptimistic: () => setParents((prev) => prev.filter((p) => p._id !== id)),
+      restoreOptimistic: (parent) => setParents((prev) => [parent, ...prev]),
+      commitDelete: () => parentService.delete(id),
+      pendingMessage: "Đã xóa phụ huynh — Hoàn tác?",
+      successMessage: "✔ Xóa phụ huynh thành công",
+      errorMessage: "Lỗi khi xóa phụ huynh",
+    });
+  };
 
   const filteredParents = parents.filter(
     (p) =>
@@ -87,17 +118,21 @@ const ParentList = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
-                 <tr>
-                    <td colSpan="4" className="px-6 py-12 text-center text-gray-500">
-                        <div className="flex justify-center items-center gap-2">
-                            <Loader2 className="animate-spin text-primary" size={20}/>
-                            <span>Đang tải dữ liệu...</span>
-                        </div>
-                    </td>
-                </tr>
+                <TableSkeleton rows={6} cols={4} />
               ) : filteredParents.length > 0 ? (
                 filteredParents.map((parent) => (
-                  <tr key={parent._id} className="hover:bg-gray-50 transition-colors group">
+                  <motion.tr
+                    key={parent._id}
+                    initial={{ opacity: 0.5, scale: 0.98 }}
+                    animate={{
+                      opacity: 1,
+                      scale: 1,
+                      backgroundColor:
+                        highlightedRowId === parent._id ? "rgb(240 253 244)" : "rgb(255 255 255)",
+                    }}
+                    transition={{ duration: 0.28, ease: "easeOut" }}
+                    className="hover:bg-gray-50 transition-colors group"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -163,7 +198,7 @@ const ParentList = () => {
                         </div>
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))
               ) : (
                 <tr>

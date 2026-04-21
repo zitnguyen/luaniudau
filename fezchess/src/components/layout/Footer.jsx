@@ -5,8 +5,11 @@ import {
   EnvelopeIcon,
   MapPinIcon,
 } from "@heroicons/react/24/outline";
+import { useSystemSettings } from "../../context/SystemSettingsContext";
 
 const Footer = () => {
+  const { settings } = useSystemSettings();
+
   return (
     <footer className="bg-secondary text-secondary-foreground pt-16 pb-8">
       <div className="container mx-auto px-4">
@@ -14,11 +17,21 @@ const Footer = () => {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-                <span className="text-2xl">♔</span>
-              </div>
+              {settings?.logoUrl ? (
+                <img
+                  src={settings.logoUrl}
+                  alt="Center logo"
+                  className="w-12 h-12 rounded-xl object-cover border border-border"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">♔</span>
+                </div>
+              )}
               <div>
-                <h3 className="font-display text-xl font-bold">Z Chess</h3>
+                <h3 className="font-display text-xl font-bold">
+                  {settings?.centerName || "Z Chess"}
+                </h3>
                 <p className="text-sm text-muted-foreground">
                   Trung tâm Cờ Vua
                 </p>
@@ -35,18 +48,21 @@ const Footer = () => {
               Liên kết nhanh
             </h4>
             <ul className="space-y-3">
-              {["Trang chủ", "Khóa học", "Giáo viên", "Liên hệ"].map(
-                (item) => (
-                  <li key={item}>
-                    <Link
-                      to={item === "Trang chủ" ? "/" : item === "Liên hệ" ? "/contact" : `/${item.toLowerCase()}`} // Adjusted specific paths
-                      className="text-muted-foreground hover:text-primary transition-colors duration-300"
-                    >
-                      {item}
-                    </Link>
-                  </li>
-                )
-              )}
+              {[
+                { label: "Trang chủ", to: "/" },
+                { label: "Khóa học", to: "/courses" },
+                { label: "Giáo viên", to: "/teachers" },
+                { label: "Liên hệ", to: "/contact" },
+              ].map((item) => (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    className="text-muted-foreground hover:text-primary transition-colors duration-300"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -58,15 +74,22 @@ const Footer = () => {
             <ul className="space-y-4">
               <li className="flex items-center gap-3 text-muted-foreground">
                 <PhoneIcon className="w-5 h-5 text-primary" />
-                <span>0934 830 045</span>
+                <span>{settings?.hotline || "0934 830 045"}</span>
               </li>
               <li className="flex items-center gap-3 text-muted-foreground">
                 <EnvelopeIcon className="w-5 h-5 text-primary" />
-                <span>zchessvn@gmail.com</span>
+                <span>{settings?.email || "zchessvn@gmail.com"}</span>
               </li>
               <li className="flex items-start gap-3 text-muted-foreground">
                 <MapPinIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <span>1181/26 KDC Lê Văn Lương, xã Nhà Bè, TP. Hồ Chí Minh</span>
+                <span>
+                  {settings?.address ||
+                    "1181/26 KDC Lê Văn Lương, xã Nhà Bè, TP. Hồ Chí Minh"}
+                </span>
+              </li>
+              <li className="flex items-center gap-3 text-muted-foreground">
+                <span className="w-5 h-5 text-primary font-bold">⏰</span>
+                <span>{settings?.workingHours || "08:00 - 20:00"}</span>
               </li>
             </ul>
           </div>

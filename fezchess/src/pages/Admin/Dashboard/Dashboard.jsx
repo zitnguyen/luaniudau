@@ -23,6 +23,7 @@ import {
 import studentService from "../../../services/studentService";
 import enrollmentService from "../../../services/enrollmentService";
 import financeService from "../../../services/financeService";
+import { getSkillLevelLabel } from "../../../utils/studentLevel";
 
 const Dashboard = () => {
   const [totalStudents, setTotalStudents] = useState(0);
@@ -104,7 +105,7 @@ const Dashboard = () => {
       if (students.length > 0) {
         const levelCounts = {};
         students.forEach(s => {
-           const lvl = s.skillLevel || 'Chưa xếp hạng';
+           const lvl = getSkillLevelLabel(s.skillLevel);
            levelCounts[lvl] = (levelCounts[lvl] || 0) + 1;
         });
 

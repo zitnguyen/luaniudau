@@ -1,9 +1,11 @@
 import React from 'react';
 import Sidebar from '../components/layout/Sidebar/Sidebar';
 import AdminHeader from '../components/layout/AdminHeader';
+import { useSystemSettings } from "../context/SystemSettingsContext";
 
 const MainLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const { settings } = useSystemSettings();
 
   return (
     <div className="flex min-h-screen bg-gray-50 relative">
@@ -22,8 +24,18 @@ const MainLayout = ({ children }) => {
                     </svg>
                 </button>
                 <div className="flex items-center gap-2">
-                    <span className="text-xl">♟️</span>
-                    <span className="font-bold text-lg text-gray-900">Z CHESS</span>
+                    {settings?.logoUrl ? (
+                      <img
+                        src={settings.logoUrl}
+                        alt="Center logo"
+                        className="w-7 h-7 rounded-md object-cover border border-gray-200"
+                      />
+                    ) : (
+                      <span className="text-xl">♟️</span>
+                    )}
+                    <span className="font-bold text-lg text-gray-900">
+                      {settings?.centerName || "Z CHESS"}
+                    </span>
                 </div>
             </div>
         </div>

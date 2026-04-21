@@ -26,7 +26,7 @@ const PublicLayout = ({ children }) => {
 
           <div className="header-actions">
             <Link to="/login" className="btn-ghost" style={{color: '#64748B'}}>Đăng nhập</Link>
-            <Link to="/test-register" className="btn-primary">Đăng ký ngay</Link>
+            <Link to="/contact" className="btn-primary">Đăng ký ngay</Link>
           </div>
 
           <button className="mobile-menu-btn md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -45,7 +45,7 @@ const PublicLayout = ({ children }) => {
             <NavLink to="/store" className="text-xl font-bold" onClick={()=>setIsMenuOpen(false)}>Khóa học</NavLink>
              <div style={{height:'1px', background:'#eee'}}></div>
             <Link to="/login" className="btn-ghost" style={{textAlign:'center'}} onClick={()=>setIsMenuOpen(false)}>Đăng nhập</Link>
-            <Link to="/test-register" className="btn-primary" style={{textAlign:'center'}} onClick={()=>setIsMenuOpen(false)}>Đăng ký ngay</Link>
+            <Link to="/contact" className="btn-primary" style={{textAlign:'center'}} onClick={()=>setIsMenuOpen(false)}>Đăng ký ngay</Link>
         </div>
       )}
 

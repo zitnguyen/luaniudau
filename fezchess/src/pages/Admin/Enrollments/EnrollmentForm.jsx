@@ -14,8 +14,8 @@ const EnrollmentForm = () => {
         studentId: '',
         classId: '',
         enrollmentDate: new Date().toISOString().split('T')[0],
-        status: 'active',
-        paymentStatus: 'pending',
+        status: 'Active',
+        paymentStatus: 'unpaid',
         feeAmount: 0 // Optional, maybe fetch from class
     });
 
@@ -38,15 +38,14 @@ const EnrollmentForm = () => {
                 setClasses(classesRes || []);
 
                 if (isEditMode) {
-                    const allEnrollments = await enrollmentService.getAll();
-                    const enrollment = allEnrollments.find(e => e._id === id);
+                    const enrollment = await enrollmentService.getById(id);
                     if (enrollment) {
                         setFormData({
                             studentId: enrollment.studentId?._id || enrollment.studentId || '',
                             classId: enrollment.classId?._id || enrollment.classId || '',
                             enrollmentDate: enrollment.enrollmentDate ? new Date(enrollment.enrollmentDate).toISOString().split('T')[0] : '',
-                            status: enrollment.status || 'active',
-                            paymentStatus: enrollment.paymentStatus || 'pending',
+                            status: enrollment.status || 'Active',
+                            paymentStatus: enrollment.paymentStatus || 'unpaid',
                             feeAmount: enrollment.feeAmount || 0
                         });
                     } else {
@@ -76,15 +75,22 @@ const EnrollmentForm = () => {
         e.preventDefault();
         try {
             setSubmitting(true);
+            let savedId = id;
             if (isEditMode) {
                 await enrollmentService.update(id, formData);
             } else {
-                await enrollmentService.create(formData);
+                const created = await enrollmentService.create(formData);
+                savedId = created?._id;
             }
-            navigate('/enrollments');
+            navigate('/enrollments', {
+                state: {
+                    updatedEnrollmentId: savedId,
+                    updatedAt: Date.now(),
+                },
+            });
         } catch (err) {
             console.error("Error saving enrollment:", err);
-            setError(err.response?.data?.message || 'Lỗi khi lưu thông tin');
+            setError(err?.response?.data?.message || err?.message || 'Lỗi khi lưu thông tin');
         } finally {
             setSubmitting(false);
         }
@@ -230,10 +236,10 @@ const EnrollmentForm = () => {
                                     onChange={handleChange} 
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                                 >
-                                    <option value="active">Đang học</option>
-                                    <option value="completed">Đã hoàn thành</option>
-                                    <option value="dropped">Đã nghỉ</option>
-                                    <option value="reserved">Bảo lưu</option>
+                                    <option value="Active">Đang học</option>
+                                    <option value="Completed">Đã hoàn thành</option>
+                                    <option value="Dropped">Đã nghỉ</option>
+                                    <option value="Reserved">Bảo lưu</option>
                                 </select>
                             </div>
 
@@ -247,9 +253,9 @@ const EnrollmentForm = () => {
                                     onChange={handleChange} 
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                                 >
-                                    <option value="pending">Chờ thanh toán</option>
+                                    <option value="unpaid">Chưa thanh toán</option>
                                     <option value="paid">Đã thanh toán</option>
-                                    <option value="overdue">Quá hạn</option>
+                                    <option value="partial">Thanh toán một phần</option>
                                 </select>
                             </div>
                         </div>

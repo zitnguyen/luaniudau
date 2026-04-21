@@ -1,27 +1,38 @@
-import axiosClient from '../api/axiosClient';
+import axiosClient from "../api/axiosClient";
+
+const unwrapData = (response) => {
+  if (response && typeof response === "object" && "success" in response) {
+    return response.data;
+  }
+  return response;
+};
 
 const attendanceService = {
-  // Get attendance records (can filter by classId, date, studentId)
-  getAll: (params) => {
-    return axiosClient.get('/attendance', { params });
-  },
-  
-  // Mark a student as present
-  markPresent: (data) => {
-    // data: { studentId, classId, date }
-    return axiosClient.post('/attendance/present', data);
+  /** Lấy điểm danh theo lớp + ngày (query date=YYYY-MM-DD) */
+  getByClassAndDate: async (classId, date) => {
+    const response = await axiosClient.get(`/attendance/class/${classId}`, {
+      params: date ? { date } : {},
+    });
+    return unwrapData(response) || [];
   },
 
-  // Mark a student as absent
-  markAbsent: (data) => {
-    // data: { studentId, classId, date, reason? }
-    return axiosClient.post('/attendance/absent', data);
+  getByStudentAndDate: async (studentId, date) => {
+    const response = await axiosClient.get("/attendance", {
+      params: { studentId, ...(date ? { date } : {}) },
+    });
+    return unwrapData(response) || [];
   },
 
-  // Update note for an attendance record
-  updateNote: (id, note) => {
-    return axiosClient.put(`/attendance/${id}/note`, { note });
-  }
+  /** Tạo / cập nhật điểm danh (một bản ghi) */
+  mark: async (payload) => {
+    const response = await axiosClient.post("/attendance", payload);
+    return unwrapData(response);
+  },
+
+  update: async (id, body) => {
+    const response = await axiosClient.put(`/attendance/${id}`, body);
+    return unwrapData(response);
+  },
 };
 
 export default attendanceService;

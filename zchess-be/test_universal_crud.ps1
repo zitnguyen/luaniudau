@@ -66,7 +66,7 @@ $studentPayload = @{
     fullName = "Test Student"
     parentId = $parentId
     dateOfBirth = "2015-01-01"
-    skillLevel = "Beginner"
+    skillLevel = "level1"
 }
 $student = Request-API -Method Post -Uri "$baseUrl/students" -Body $studentPayload -Headers $headers
 if ($student) { Write-Host "Created Student: $($student.fullName)" -ForegroundColor Green }

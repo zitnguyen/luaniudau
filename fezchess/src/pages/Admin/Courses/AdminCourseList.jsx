@@ -30,7 +30,7 @@ const AdminCourseList = () => {
             // Actually, for now let's just fetch what we can and if drafts are missing, I'll update the backend controller.
             
             const response = await axiosClient.get('/courses?admin=true'); // Hinting we want all
-            setCourses(response);
+            setCourses(Array.isArray(response) ? response : []);
         } catch (error) {
             console.error("Error fetching courses:", error);
         } finally {
@@ -51,8 +51,8 @@ const AdminCourseList = () => {
     };
 
     const filteredCourses = courses.filter(course => 
-        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.category.toLowerCase().includes(searchTerm.toLowerCase())
+        (course.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (course.category || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (

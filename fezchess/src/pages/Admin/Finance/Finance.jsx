@@ -111,9 +111,13 @@ const Finance = () => {
         setSelectedDate({ month: Number(month), year: Number(year) });
     };
 
-    const handleExport = () => {
+    const handleExport = async () => {
         const { month, year } = selectedDate;
-        financeService.exportFinanceReport(month, year);
+        try {
+            await financeService.exportFinanceReport(month, year);
+        } catch (err) {
+            console.error("Export failed:", err);
+        }
     };
 
     // Generate last 12 months for dropdown

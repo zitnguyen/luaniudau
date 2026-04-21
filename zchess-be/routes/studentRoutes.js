@@ -2,46 +2,31 @@ const express = require("express");
 const router = express.Router();
 const studentController = require("../controllers/studentController");
 const { protect, authorize } = require("../middleware/authMiddleware");
+const { validateObjectIdParam } = require("../middleware/paramValidationMiddleware");
 
-// Parent Routes
-router.get(
-  "/my-children",
-  protect,
-  authorize("Parent"),
-  studentController.getMyChildren,
-);
-// Parent can create student? Maybe, or Admin only. Let's allow Parent for now.
-router.post(
-  "/my-children",
-  protect,
-  authorize("Parent"),
-  (req, res, next) => {
-    req.body.parentId = req.user._id; // Force parentId to be current user
-    next();
-  },
-  studentController.createStudent,
-);
+router.use(protect);
 
-// Admin Routes
-router.get("/", protect, authorize("Admin"), studentController.getAllStudents);
+/**
+ * Portal phụ huynh: chỉ đọc danh sách con (không phải GET / — full list admin-only).
+ * Đặt trước block Admin để không bị nuốt bởi GET /:id.
+ */
+router.get("/my-children", authorize("Parent"), studentController.getMyChildren);
+
 router.get(
-  "/:id",
-  protect,
+  "/parent/:parentId",
   authorize("Admin", "Parent"),
-  studentController.getStudentById,
-); // Parents can view their child - need check inside controller or middleware
-router.post("/", protect, authorize("Admin"), studentController.createStudent);
-router.put(
-  "/:id",
-  protect,
-  authorize("Admin"),
-  studentController.updateStudent,
+  validateObjectIdParam("parentId"),
+  studentController.getStudentsByParentId,
 );
-router.delete(
-  "/:id",
-  protect,
-  authorize("Admin"),
-  studentController.deleteStudent,
-);
+
+/** CRUD học viên: chỉ Admin — GET/POST /, GET/PATCH/PUT/DELETE /:id */
+router.use(authorize("Admin"));
+
+router.get("/", studentController.getAllStudents);
+router.get("/:id", validateObjectIdParam("id"), studentController.getStudentById);
+router.post("/", studentController.createStudent);
+router.put("/:id", validateObjectIdParam("id"), studentController.updateStudent);
+router.patch("/:id", validateObjectIdParam("id"), studentController.updateStudent);
+router.delete("/:id", validateObjectIdParam("id"), studentController.deleteStudent);
 
 module.exports = router;

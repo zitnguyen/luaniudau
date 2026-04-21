@@ -3,6 +3,7 @@ import parentService from '../../../services/parentService';
 import authService from '../../../services/authService';
 import { User, Calendar, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getSkillLevelLabel } from '../../../utils/studentLevel';
 
 const ParentDashboard = () => {
     const user = authService.getCurrentUser();
@@ -47,8 +48,8 @@ const ParentDashboard = () => {
                                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
                                     <User size={24} />
                                 </div>
-                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${child.skillLevel === 'Advanced' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
-                                    {child.skillLevel || 'Beginner'}
+                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                    {getSkillLevelLabel(child.skillLevel)}
                                 </span>
                             </div>
                             

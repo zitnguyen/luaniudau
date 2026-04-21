@@ -4,6 +4,7 @@ const attendanceController = require("../controllers/attendanceController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 
 // Teachers/Admin take attendance
+router.get("/", protect, authorize("Admin", "Teacher"), attendanceController.listAttendance);
 router.post("/", protect, authorize("Admin", "Teacher"), attendanceController.markAttendance);
 router.get("/class/:classId", protect, authorize("Admin", "Teacher"), attendanceController.getClassAttendance);
 router.put("/:id", protect, authorize("Admin", "Teacher"), attendanceController.updateAttendance);

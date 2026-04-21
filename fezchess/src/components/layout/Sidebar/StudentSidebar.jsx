@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, BookOpen, Wallet, UserCircle, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, BookOpen, Wallet, UserCircle, LogOut, Bell } from 'lucide-react';
 import authService from '../../../services/authService';
+import { getRoleLabel } from '../../../constants/roleLabel';
 
 
 const StudentSidebar = () => {
@@ -18,7 +19,7 @@ const StudentSidebar = () => {
         <div className="logo-icon">♟️</div>
         <div>
            <div className="logo-title">Z CHESS</div>
-           <div className="logo-subtitle">{user?.fullName || "Student Portal"}</div>
+           <div className="logo-subtitle">{user?.fullName || getRoleLabel(user?.role) || "User"}</div>
         </div>
       </div>
       
@@ -46,6 +47,10 @@ const StudentSidebar = () => {
         <NavLink to="/student/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <UserCircle size={20} />
           <span>Hồ sơ</span>
+        </NavLink>
+        <NavLink to="/student/notifications" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <Bell size={20} />
+          <span>Notifications</span>
         </NavLink>
       </nav>
       

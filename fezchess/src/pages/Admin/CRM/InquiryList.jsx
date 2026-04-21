@@ -13,7 +13,7 @@ const InquiryList = () => {
     const fetchInquiries = async () => {
         try {
             const data = await axiosClient.get('/inquiries');
-            setInquiries(data);
+            setInquiries(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Error fetching inquiries:", error);
         } finally {

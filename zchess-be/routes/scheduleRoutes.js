@@ -1,14 +1,33 @@
 const express = require("express");
 const router = express.Router();
 const scheduleController = require("../controllers/scheduleController");
+const { protect, authorize } = require("../middleware/authMiddleware");
+const { validateObjectIdParam } = require("../middleware/paramValidationMiddleware");
 
-// Lấy lịch học của học viên
-router.get("/student/:studentId", scheduleController.getByStudentId);
+router.get("/", protect, authorize("Admin", "Teacher", "Parent"), scheduleController.getAllSchedules);
 
-// Tạo hoặc cập nhật lịch học
-router.put("/student/:studentId", scheduleController.upsertByStudentId);
+router.get(
+  "/student/:studentId",
+  protect,
+  authorize("Admin", "Teacher", "Parent"),
+  validateObjectIdParam("studentId"),
+  scheduleController.getByStudentId,
+);
 
-// Xóa lịch học
-router.delete("/student/:studentId", scheduleController.deleteByStudentId);
+router.put(
+  "/student/:studentId",
+  protect,
+  authorize("Admin", "Teacher"),
+  validateObjectIdParam("studentId"),
+  scheduleController.upsertByStudentId,
+);
+
+router.delete(
+  "/student/:studentId",
+  protect,
+  authorize("Admin", "Teacher"),
+  validateObjectIdParam("studentId"),
+  scheduleController.deleteByStudentId,
+);
 
 module.exports = router;

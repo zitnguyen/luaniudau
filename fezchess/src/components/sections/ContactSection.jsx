@@ -2,8 +2,10 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import ScrollReveal from "../common/ScrollReveal";
 import Spinner from "../common/Spinner";
+import { useSystemSettings } from "../../context/SystemSettingsContext";
 
 const ContactSection = () => {
+  const { settings } = useSystemSettings();
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -92,7 +94,9 @@ const ContactSection = () => {
                   <div className="font-semibold text-foreground">
                     Hotline tư vấn
                   </div>
-                  <div className="text-muted-foreground">0123 456 789</div>
+                  <div className="text-muted-foreground">
+                    {settings?.hotline || "0123 456 789"}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -104,7 +108,7 @@ const ContactSection = () => {
                     Giờ làm việc
                   </div>
                   <div className="text-muted-foreground">
-                    8:00 - 20:00, Thứ 2 - Chủ nhật
+                    {settings?.workingHours || "8:00 - 20:00, Thứ 2 - Chủ nhật"}
                   </div>
                 </div>
               </div>
@@ -115,7 +119,7 @@ const ContactSection = () => {
                 <div>
                   <div className="font-semibold text-foreground">Địa chỉ</div>
                   <div className="text-muted-foreground">
-                    123 Đường ABC, Quận XYZ, TP.HCM
+                    {settings?.address || "123 Đường ABC, Quận XYZ, TP.HCM"}
                   </div>
                 </div>
               </div>

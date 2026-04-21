@@ -11,6 +11,12 @@ const progressSchema = new mongoose.Schema({
     ref: "Class",
     required: true,
   },
+  teacherId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: false,
+    default: null,
+  },
   sessions: [
     {
       attendanceId: {

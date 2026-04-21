@@ -1,25 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calculator, Calendar as CalendarIcon, Clock, Users, Loader2 } from 'lucide-react';
-import studentService from '../../../services/studentService';
+import scheduleService from '../../../services/scheduleService';
+import { getSkillLevelLabel } from '../../../utils/studentLevel';
 
 const Schedule = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchStudents = async () => {
             try {
-                const data = await studentService.getAll();
-                setStudents(Array.isArray(data) ? data : data.students || []);
+                setLoading(true);
+                setError('');
+                const schedules = await scheduleService.getAll();
+                const merged = schedules
+                    .filter((record) => record?.studentId && !record.studentId.isDeleted)
+                    .map((record) => ({
+                        ...record.studentId,
+                        _id: record.studentId._id,
+                        schedule: {
+                            _id: record._id,
+                            scheduleId: record.scheduleId,
+                            slots: record.slots || [],
+                            startDate: record.startDate,
+                            room: record.room,
+                        },
+                    }));
+                setStudents(merged);
             } catch (error) {
                 console.error("Failed to fetch students", error);
+                setError(error?.response?.data?.message || "Không thể tải dữ liệu lịch học");
             } finally {
                 setLoading(false);
             }
         };
         fetchStudents();
     }, []);
+
+    const normalizeDayValue = (day) => {
+        if (typeof day === 'number' && day >= 0 && day <= 6) return day;
+        if (typeof day === 'string') {
+            const key = day.trim().toUpperCase();
+            const map = { CN: 0, T2: 1, T3: 2, T4: 3, T5: 4, T6: 5, T7: 6 };
+            if (key in map) return map[key];
+            const asNum = Number(key);
+            if (Number.isInteger(asNum) && asNum >= 0 && asNum <= 6) return asNum;
+        }
+        return null;
+    };
 
     // Helper to get days in the current week view
     const getDaysInView = () => {
@@ -53,7 +83,8 @@ const Schedule = () => {
             // Handle "slots" format (new)
             if (student.schedule.slots && student.schedule.slots.length > 0) {
                 return student.schedule.slots.some(slot => {
-                    if (slot.day !== currentDayVal) return false;
+                    const slotDay = normalizeDayValue(slot.day);
+                    if (slotDay === null || slotDay !== currentDayVal) return false;
                     const [h] = slot.time.split(':').map(Number);
                     return h === hour; 
                 });
@@ -182,6 +213,12 @@ const Schedule = () => {
                  </button>
             </div>
 
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+                    {error}
+                </div>
+            )}
+
             {/* Mobile Day Selector (Horizontal Scroll) */}
             <div className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-20 flex overflow-x-auto no-scrollbar py-2 px-1">
                 {daysInView.map((day, index) => {
@@ -234,12 +271,12 @@ const Schedule = () => {
                                          {events.map(student => (
                                              <div key={student._id} className="bg-white border text-sm border-l-4 border-l-primary/70 border-gray-200 rounded-lg p-3 shadow-sm">
                                                  <div className="font-bold text-gray-800 text-base mb-1">
-                                                     {student.fullName}
+                                                    {student.fullName}
                                                  </div>
                                                  <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-2">
                                                      <div className="flex items-center gap-1">
                                                         <Users size={12} />
-                                                        <span>{student.skillLevel || 'Chưa xếp hạng'}</span>
+                                                        <span>{getSkillLevelLabel(student.skillLevel)}</span>
                                                      </div>
                                                      <div className="flex items-center gap-1">
                                                         <Clock size={12} />
@@ -353,7 +390,7 @@ const Schedule = () => {
                                                                     <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-500">
                                                                         <Users size={12} />
                                                                         <span className="truncate max-w-[80px]">
-                                                                            {student.skillLevel || 'Chưa xếp hạng'}
+                                                                            {getSkillLevelLabel(student.skillLevel)}
                                                                         </span>
                                                                     </div>
 

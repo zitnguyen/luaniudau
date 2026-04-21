@@ -40,14 +40,25 @@ const deleteTransaction = async (id) => {
     return await axiosClient.delete(`/finance/transactions/${id}`);
 };
 
-const exportFinanceReport = (month, year) => {
+const exportFinanceReport = async (month, year) => {
     const params = new URLSearchParams();
     if (month) params.append('month', month);
     if (year) params.append('year', year);
-    // For window.open, we might need the full URL if axiosClient doesn't expose it easily,
-    // but usually we rely on env var.
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    window.open(`${baseUrl}/finance/export?${params}`, '_blank');
+    const res = await axiosClient.get(`/finance/export?${params}`, {
+        responseType: 'blob',
+    });
+    const blob = res.data;
+    const disposition = res.headers?.['content-disposition'] || '';
+    const match = /filename="?([^";]+)"?/i.exec(disposition);
+    const filename = match?.[1] || 'BaoCaoTaiChinh.csv';
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
 };
 
 const payTuition = async (enrollmentId) => {

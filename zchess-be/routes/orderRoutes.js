@@ -1,10 +1,31 @@
 const express = require("express");
 const router = express.Router();
 const orderController = require("../controllers/orderController");
+const { protect, authorize } = require("../middleware/authMiddleware");
 
-router.post("/", orderController.createOrder);
-router.get("/myorders/:userId", orderController.getMyOrders); // Temporary, should use auth middleware
-router.get("/:id", orderController.getOrderById);
-router.put("/:id/pay", orderController.updateOrderStatus);
+router.post("/", protect, orderController.createOrder);
+
+router.get(
+  "/my-orders",
+  protect,
+  orderController.getMyOrdersForAuthUser,
+);
+
+router.get(
+  "/admin/all",
+  protect,
+  authorize("Admin"),
+  orderController.listAllOrders,
+);
+
+router.get(
+  "/myorders/:userId",
+  protect,
+  authorize("Admin"),
+  orderController.getMyOrders,
+);
+
+router.get("/:id", protect, orderController.getOrderById);
+router.put("/:id/pay", protect, orderController.updateOrderStatus);
 
 module.exports = router;

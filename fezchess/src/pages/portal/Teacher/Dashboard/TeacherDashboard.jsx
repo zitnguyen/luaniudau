@@ -1,180 +1,337 @@
-import React from 'react';
-import { Calendar, Users, FileText, AlertCircle, Clock, CheckCircle, Plus } from 'lucide-react';
-
+import React, { useEffect, useMemo, useState } from "react";
+import { BookOpen, Calendar, Clock, Users } from "lucide-react";
+import teacherDashboardService from "../../../../services/teacherDashboardService";
 
 const TeacherDashboard = () => {
-  const nextClass = {
-      name: 'Khai cuộc nâng cao',
-      time: '14:00 hôm nay',
-      duration: '90 phút'
-  };
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [dashboardData, setDashboardData] = useState({});
+  const [classes, setClasses] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [finance, setFinance] = useState({});
 
-  const stats = [
-      { label: 'Lớp đang dạy', value: '04', sub: '+1 lớp mới tháng này', icon: BookIcon, color: '#e0f2fe', textColor: '#0284c7' },
-      { label: 'Tổng học viên', value: '42', sub: '38 đang hoạt động', icon: Users, color: '#f3e8ff', textColor: '#9333ea' },
-      { label: 'Lịch tuần này', value: '08', sub: 'Sắp tới: 14:00 hôm nay', icon: Calendar, color: '#ffedd5', textColor: '#ea580c' },
-      { label: 'Cần duyệt', value: '03', sub: '! Cần xử lý ngay', icon: AlertCircle, color: '#fee2e2', textColor: '#dc2626', isWarning: true },
-  ];
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const [dashboardRes, classesRes, studentsRes, attendanceRes, financeRes] =
+          await Promise.allSettled([
+            teacherDashboardService.getDashboard(),
+            teacherDashboardService.getClasses(),
+            teacherDashboardService.getStudents(),
+            teacherDashboardService.getAttendance(),
+            teacherDashboardService.getFinance(),
+          ]);
 
-  const schedule = [
-      { id: 1, time: 'HÔM NAY, 14:00 - 15:30', name: 'Khai cuộc nâng cao', room: 'Phòng 201 • Online', students: 12, status: 'active' },
-      { id: 2, time: 'NGÀY MAI, 09:00 - 10:30', name: 'Cờ vua căn bản - K12', room: 'Phòng 102', students: 15, status: 'upcoming' },
-      { id: 3, time: 'THỨ 6, 16:00 - 17:30', name: 'Chiến thuật trung cuộc', room: 'Phòng 205', students: 10, status: 'upcoming' },
-  ];
+        if (dashboardRes.status === "fulfilled") {
+          setDashboardData(dashboardRes.value || {});
+        } else {
+          setDashboardData({});
+        }
+        setClasses(
+          classesRes.status === "fulfilled" && Array.isArray(classesRes.value)
+            ? classesRes.value
+            : [],
+        );
+        setStudents(
+          studentsRes.status === "fulfilled" && Array.isArray(studentsRes.value)
+            ? studentsRes.value
+            : [],
+        );
+        setAttendance(
+          attendanceRes.status === "fulfilled" && Array.isArray(attendanceRes.value)
+            ? attendanceRes.value
+            : [],
+        );
+        setFinance(
+          financeRes.status === "fulfilled" && financeRes.value
+            ? financeRes.value
+            : {},
+        );
 
-  const todos = [
-      { id: 1, title: "Điểm danh lớp 'Khai cuộc' hôm qua", deadline: 'Hết hạn trong 2 giờ', urgency: 'high' },
-      { id: 2, title: "Chấm điểm bài tập về nhà K12", deadline: 'Hạn chót: Thứ 6', urgency: 'normal' },
-      { id: 3, title: "Gửi báo cáo tháng 10", deadline: 'Hạn chót: Cuối tháng', urgency: 'normal' },
-  ];
+        if (dashboardRes.status === "rejected") {
+          setError("Không thể tải dữ liệu tổng quan giáo viên.");
+        }
+      } catch (e) {
+        setError("Không thể tải dữ liệu dashboard.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, []);
+
+  const stats = useMemo(() => {
+    const apiStats = dashboardData?.stats || {};
+    return [
+      {
+        label: "Lớp đang dạy",
+        value: apiStats.totalClasses ?? classes.length ?? 0,
+        sub: "Theo phân công hiện tại",
+        icon: BookOpen,
+        color: "bg-blue-50",
+        iconColor: "text-blue-600",
+      },
+      {
+        label: "Tổng học viên",
+        value:
+          apiStats.totalStudents ??
+          classes.reduce((sum, item) => sum + (item.currentStudents || 0), 0),
+        sub: "Học viên theo lớp",
+        icon: Users,
+        color: "bg-purple-50",
+        iconColor: "text-purple-600",
+      },
+      {
+        label: "Lịch dạy hôm nay",
+        value:
+          apiStats.todaySchedulesCount ??
+          (Array.isArray(dashboardData?.todaySchedule)
+            ? dashboardData.todaySchedule.length
+            : 0),
+        sub: "Lớp có lịch trong ngày",
+        icon: Calendar,
+        color: "bg-orange-50",
+        iconColor: "text-orange-600",
+      },
+      {
+        label: "Buổi dạy đã chốt",
+        value: finance.confirmedSessions ?? 0,
+        sub: `${Number(finance.totalHours || 0).toFixed(1)} giờ`,
+        icon: Clock,
+        color: "bg-emerald-50",
+        iconColor: "text-emerald-600",
+      },
+    ];
+  }, [classes, dashboardData, finance]);
+
+  const todaySchedule = Array.isArray(dashboardData?.todaySchedule)
+    ? dashboardData.todaySchedule
+    : [];
+  const latestAttendance = Array.isArray(dashboardData?.latestAttendance)
+    ? dashboardData.latestAttendance
+    : attendance.slice(0, 8);
 
   return (
-    <div className="teacher-dashboard">
-        {/* Welcome Section */}
-        <div className="welcome-banner">
-            <div>
-                <h1 className="welcome-title">Xin chào, Thầy Minh! 👋</h1>
-                <p className="welcome-sub">
-                    <span className="calendar-icon">📅</span> Lớp tiếp theo: <strong>{nextClass.name}</strong> — Bắt đầu lúc {nextClass.time}.
-                </p>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Dashboard giáo viên
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Xin chào {user?.fullName || "Giáo viên"}, đây là tổng quan lớp học hôm nay.
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat) => (
+          <div
+            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"
+            key={stat.label}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className={`p-3 rounded-xl ${stat.color} ${stat.iconColor}`}>
+                <stat.icon size={22} />
+              </div>
             </div>
-            <div className="welcome-actions">
-                <button className="btn-outline">
-                    <Calendar size={16}/> Xem lịch đầy đủ
-                </button>
-                <button className="btn-primary-light">
-                    <CheckCircle size={16}/> Điểm danh nhanh
-                </button>
+            <h3 className="text-3xl font-bold text-gray-900 mb-1">
+              {loading ? "--" : stat.value}
+            </h3>
+            <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+            <p className="text-xs text-gray-400 mt-1">{stat.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Lịch dạy hôm nay</h3>
+          {loading ? (
+            <div className="text-sm text-gray-500">Đang tải lịch dạy...</div>
+          ) : todaySchedule.length === 0 ? (
+            <div className="text-sm text-gray-500">Không có lịch dạy hôm nay.</div>
+          ) : (
+            <div className="space-y-3">
+              {todaySchedule.map((item) => (
+                <div
+                  key={item._id}
+                  className="border border-gray-100 rounded-xl p-3 bg-gray-50"
+                >
+                  <div className="font-semibold text-gray-900">
+                    {item.className || "N/A"}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    {item.schedule || "Chưa có lịch"} - {item.currentStudents || 0} học viên
+                  </div>
+                </div>
+              ))}
             </div>
+          )}
         </div>
 
-        {/* Stats Grid */}
-        <div className="t-stats-grid">
-            {stats.map((stat, index) => (
-                <div className="t-stat-card" key={index}>
-                    <div className="t-stat-top">
-                        <div className="t-stat-label">{stat.label}</div>
-                        <div className="t-stat-icon" style={{background: stat.color, color: stat.textColor}}>
-                            <stat.icon size={20} />
-                        </div>
-                    </div>
-                    <div className="t-stat-value">{stat.value}</div>
-                    <div className={`t-stat-sub ${stat.isWarning ? 'warning-text' : ''}`}>
-                        {stat.sub}
-                    </div>
-                </div>
-            ))}
-        </div>
-
-        <div className="dashboard-columns">
-             {/* Left Column: Schedule */}
-            <div className="column-main">
-                <div className="section-header">
-                    <h3><Clock size={20} className="section-icon-blue"/> Lịch dạy sắp tới</h3>
-                    <a href="#" className="link-action">Xem tất cả</a>
-                </div>
-                <div className="schedule-list">
-                    {schedule.map((item, index) => (
-                        <div className="schedule-item" key={item.id}>
-                            <div className="timeline-dot"></div>
-                            {index !== schedule.length - 1 && <div className="timeline-line"></div>}
-                            
-                            <div className="schedule-content">
-                                <div className="schedule-time">{item.time}</div>
-                                <div className="schedule-card">
-                                    <div className="schedule-info">
-                                        <h4>{item.name}</h4>
-                                        <div className="schedule-room">🏢 {item.room}</div>
-                                    </div>
-                                    <div className="schedule-actions">
-                                        <div className="avatar-group">
-                                            <img src="https://i.pravatar.cc/150?img=1" alt="" />
-                                            <img src="https://i.pravatar.cc/150?img=2" alt="" />
-                                            <span className="avatar-more">+{item.students}</span>
-                                        </div>
-                                        {item.status === 'active' && (
-                                            <button className="btn-primary-sm">Vào lớp</button>
-                                        )}
-                                        <button className="btn-icon-sm">⋮</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Thu nhập / buổi dạy</h3>
+          {loading ? (
+            <div className="text-sm text-gray-500">Đang tải dữ liệu buổi dạy...</div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Tổng buổi dạy</span>
+                <span className="font-semibold text-gray-900">
+                  {finance.totalSessions ?? 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Tổng giờ dạy</span>
+                <span className="font-semibold text-gray-900">
+                  {Number(finance.totalHours || 0).toFixed(1)}h
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Buổi đã thanh toán</span>
+                <span className="font-semibold text-emerald-600">
+                  {finance.paidSessions ?? 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Buổi đã xác nhận</span>
+                <span className="font-semibold text-blue-600">
+                  {finance.confirmedSessions ?? 0}
+                </span>
+              </div>
             </div>
-
-            {/* Right Column: Todo & Notifs */}
-            <div className="column-side">
-                <div className="side-card">
-                     <div className="section-header">
-                        <h3><CheckCircle size={20} className="section-icon-orange"/> Việc cần làm</h3>
-                     </div>
-                     <div className="todo-list">
-                         {todos.map(todo => (
-                             <div className="todo-item" key={todo.id}>
-                                 <input type="checkbox" className="todo-check" />
-                                 <div className="todo-info">
-                                     <div className="todo-title">{todo.title}</div>
-                                     <div className={`todo-deadline ${todo.urgency === 'high' ? 'deadline-high' : ''}`}>
-                                         {todo.deadline}
-                                     </div>
-                                 </div>
-                             </div>
-                         ))}
-                     </div>
-                     <button className="add-task-btn">
-                         <Plus size={16}/> Thêm công việc
-                     </button>
-                </div>
-
-                <div className="side-card">
-                    <div className="section-header">
-                        <h3>📢 Thông báo</h3>
-                         <span className="badge-new">Mới</span>
-                     </div>
-                     <div className="notif-box">
-                         <div className="notif-icon-box">ℹ️</div>
-                         <div className="notif-content-box">
-                             <div className="notif-box-title">Bảo trì hệ thống</div>
-                             <div className="notif-box-desc">Hệ thống sẽ bảo trì vào 22:00 tối nay để nâng cấp tính năng mới.</div>
-                             <div className="notif-box-time">1 giờ trước</div>
-                         </div>
-                     </div>
-                      <div className="notif-box">
-                         <div className="notif-icon-box success">🏆</div>
-                         <div className="notif-content-box">
-                             <div className="notif-box-title">Giải đấu Mùa Đông</div>
-                             <div className="notif-box-desc">Đã mở đăng ký cho giải đấu Cờ vua Mùa Đông.</div>
-                         </div>
-                     </div>
-                </div>
-            </div>
+          )}
         </div>
-        
-        {/* Classes Footer Section */}
-        <div className="classes-footer-section">
-             <h3>🎓 Lớp đang dạy</h3>
-             <div className="class-cards-row">
-                 <div className="class-mini-card">
-                     <div className="class-icon-wrapper-blue">🎮</div>
-                     <div className="class-mini-info">
-                         <div className="class-mini-status success">Đang diễn ra</div>
-                     </div>
-                 </div>
-                  <div className="class-mini-card">
-                     <div className="class-icon-wrapper-purple">⚙️</div>
-                     <div className="class-mini-info">
-                         <div className="class-mini-status warning">Sắp kết thúc</div>
-                     </div>
-                 </div>
-             </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Danh sách lớp và học viên</h3>
+        {loading ? (
+          <div className="text-sm text-gray-500">Đang tải danh sách lớp...</div>
+        ) : classes.length === 0 ? (
+          <div className="text-sm text-gray-500">Chưa có lớp nào được phân công.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Lớp
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Lịch học
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Sĩ số
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Học viên
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {classes.map((item) => (
+                  <tr key={item._id}>
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {item.className || "N/A"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {item.schedule || "Chưa có lịch"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {item.currentStudents || 0}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {Array.isArray(item.students) && item.students.length > 0
+                        ? item.students
+                            .slice(0, 3)
+                            .map((student) => student?.fullName || "N/A")
+                            .join(", ")
+                        : "Chưa có học viên"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Điểm danh gần nhất</h3>
+        {loading ? (
+          <div className="text-sm text-gray-500">Đang tải điểm danh...</div>
+        ) : latestAttendance.length === 0 ? (
+          <div className="text-sm text-gray-500">Chưa có dữ liệu điểm danh.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Học viên
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Lớp
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Ngày
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Trạng thái
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {latestAttendance.map((item) => (
+                  <tr key={item._id}>
+                    <td className="px-4 py-3 text-gray-900">
+                      {item.studentId?.fullName || "N/A"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {item.classId?.className || "N/A"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {item.date ? new Date(item.date).toLocaleDateString("vi-VN") : "--"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          item.status === "present"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-red-50 text-red-700"
+                        }`}
+                      >
+                        {item.status === "present" ? "Có mặt" : "Vắng"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {!loading && students.length === 0 && classes.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-xl px-4 py-3 text-sm">
+          Chưa có dữ liệu học viên theo lớp. Vui lòng kiểm tra ghi danh.
         </div>
+      )}
     </div>
   );
 };
-
-// Simple Icon component wrapper if needed
-const BookIcon = ({size}) => <span>📖</span>;
 
 export default TeacherDashboard;

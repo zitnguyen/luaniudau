@@ -16,14 +16,11 @@ const MyCourses = () => {
 
     const fetchMyCourses = async () => {
         try {
-            // Need to implement getMyOrders in orderService frontend
-            // For now assuming the backend endpoint exists and is unsecured/secured by userId params
-            // Adjusting based on standard pattern
-             // const res = await orderService.getMyOrders(user.id);
-             // setOrders(res);
-             setLoading(false); // Mock for now
+            const res = await orderService.getMyOrders();
+            setOrders(Array.isArray(res) ? res : []);
         } catch (error) {
             console.error("Failed to fetch my courses", error);
+        } finally {
             setLoading(false);
         }
     };
@@ -35,8 +32,7 @@ const MyCourses = () => {
             {loading ? (
                 <div>Đang tải...</div>
             ) : (
-                <>
-                    {/* Placeholder for no courses */}
+                orders.length === 0 ? (
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
                         <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Award className="text-blue-500" size={32} />
@@ -47,7 +43,28 @@ const MyCourses = () => {
                             Xem khóa học
                         </Link>
                     </div>
-                </>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {orders.flatMap((order) => (order.items || []).map((item) => ({
+                            orderId: order._id,
+                            course: item.courseId,
+                        }))).map((entry, index) => (
+                            <div key={`${entry.orderId}-${entry.course?._id || index}`} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                                <div className="flex items-start gap-3">
+                                    <PlayCircle className="text-blue-500 mt-0.5" size={20} />
+                                    <div>
+                                        <h3 className="font-semibold text-gray-900">
+                                            {entry.course?.title || "Khóa học"}
+                                        </h3>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            {entry.course?.description || "Khóa học đã đăng ký"}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )
             )}
         </div>
     );

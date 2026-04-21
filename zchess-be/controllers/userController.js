@@ -1,138 +1,179 @@
 const User = require("../models/User");
 const Teacher = require("../models/Teacher");
-const Admin = require("../models/Admin");
-
-const jwt = require("jsonwebtoken");
+const Class = require("../models/Class");
 const bcrypt = require("bcryptjs");
+const asyncHandler = require("../middleware/asyncHandler");
 
-// Auth logic moved to authController.js
-
-exports.getMe = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select("-password");
-    if (!user) {
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-    }
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+exports.getMe = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id).select("-password");
+  if (!user) {
+    return res.status(404).json({ message: "Không tìm thấy người dùng" });
   }
-};
+  res.json(user);
+});
 
-exports.createUser = async (req, res) => {
-  try {
-    const { username, fullName, email, phone, password, role, specialization, experienceYears, certification, lastname, firstname } = req.body;
+exports.createUser = asyncHandler(async (req, res) => {
+  const {
+    username,
+    fullName,
+    email,
+    phone,
+    password,
+    role,
+    specialization,
+    experienceYears,
+    certification,
+    avatarUrl,
+    lastname,
+    firstname,
+  } = req.body;
 
-    const userExists = await User.findOne({  $or: [{ email }, { username }, { phone }]  });
-    if (userExists) {
-      return res.status(409).json({ message: "Người dùng đã tồn tại" });
-    }
+  const userExists = await User.findOne({
+    $or: [{ email }, { username }, { phone }],
+  });
+  if (userExists) {
+    return res.status(409).json({ message: "Người dùng đã tồn tại" });
+  }
 
-    const finalFullName = `${lastname} ${firstname}`;
+  const finalFullName = String(fullName || `${lastname || ""} ${firstname || ""}`).trim();
 
-    let user;
-    if (role === 'Teacher') {
-        user = await Teacher.create({
-            username,
-            fullName: finalFullName,
-            email,
-            phone,
-            password,
-            role,
-            specialization,
-            experienceYears,
-            certification
-        });
-    } else {
-        user = await User.create({
-            username,
-            fullName: finalFullName,
-            email,
-            phone,
-            password,
-            role: role || 'Parent'
-        });
-    }
-    
-    res.status(201).json({
-        _id: user._id,
-        username: user.username,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role
+  let user;
+  if (role === "Teacher") {
+    user = await Teacher.create({
+      username,
+      fullName: finalFullName,
+      email,
+      phone,
+      password,
+      role,
+      specialization,
+      experienceYears,
+      certification,
+      avatarUrl: avatarUrl || "",
     });
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+  } else {
+    user = await User.create({
+      username,
+      fullName: finalFullName,
+      email,
+      phone,
+      password,
+      role: role || "Parent",
+      avatarUrl: avatarUrl || "",
+    });
   }
-};
 
-exports.getAllUsers = async (req, res) => {
-  try {
-    const filter = {};
-    if (req.query.role) filter.role = req.query.role;
-    const users = await User.find(filter);
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  res.status(201).json({
+    _id: user._id,
+    username: user.username,
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+  });
+});
+
+exports.getAllUsers = asyncHandler(async (req, res) => {
+  const filter = {};
+  if (req.query.role) filter.role = req.query.role;
+  const users = await User.find(filter);
+  res.json(users);
+});
+
+exports.getUserById = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    return res.status(404).json({ message: "Không tìm thấy người dùng" });
   }
-};
+  res.json(user);
+});
 
-exports.getUserById = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-    }
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+exports.updateUser = asyncHandler(async (req, res) => {
+  const { password, ...updateData } = req.body;
+
+  let user = await User.findById(req.params.id);
+  if (!user) {
+    return res.status(404).json({ message: "Không tìm thấy người dùng" });
   }
-};
-
-exports.updateUser = async (req, res) => {
-  try {
-    const { password, ...updateData } = req.body;
-    
-    let user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-    }
-    if (password && password.trim() !== "") {
-        const salt = await bcrypt.genSalt(10);
-        updateData.password = await bcrypt.hash(password, salt);
-    }
-    if (user.role === 'Teacher') {
-        user = await Teacher.findByIdAndUpdate(req.params.id, updateData, {
-            new: true,
-            runValidators: true
-        });
-    } else {
-        user = await User.findByIdAndUpdate(req.params.id, updateData, {
-            new: true,
-            runValidators: true
-        });
-    }
-    
-    res.json(user);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+  if (password && password.trim() !== "") {
+    const salt = await bcrypt.genSalt(10);
+    updateData.password = await bcrypt.hash(password, salt);
   }
-};
-
-exports.deleteUser = async (req, res) => {
-  try {
-    await User.findByIdAndDelete(req.params.id);
-    res.json({ message: "Đã xóa người dùng" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  if (user.role === "Teacher") {
+    user = await Teacher.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+  } else {
+    user = await User.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    });
   }
-};
 
-exports.getTeachers = async (req, res) => {
-    try {
-        const teachers = await User.find({ role: 'Teacher' });
-        res.json(teachers);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-};
+  res.json(user);
+});
+
+exports.deleteUser = asyncHandler(async (req, res) => {
+  await User.findByIdAndDelete(req.params.id);
+  res.json({ message: "Đã xóa người dùng" });
+});
+
+exports.getTeachers = asyncHandler(async (req, res) => {
+  const keyword = String(req.query.keyword || "").trim();
+  const filter = { role: "Teacher" };
+  if (keyword) {
+    filter.$or = [
+      { fullName: { $regex: keyword, $options: "i" } },
+      { username: { $regex: keyword, $options: "i" } },
+      { email: { $regex: keyword, $options: "i" } },
+      { phone: { $regex: keyword, $options: "i" } },
+      { specialization: { $regex: keyword, $options: "i" } },
+    ];
+  }
+
+  const teachers = await User.find(filter)
+    .select(
+      "_id username fullName email phone role specialization experienceYears certification avatarUrl createdAt",
+    )
+    .sort({ createdAt: -1 })
+    .lean();
+
+  res.json(
+    teachers.map((teacher) => ({
+      ...teacher,
+      status: "Active",
+    })),
+  );
+});
+
+exports.getTeacherById = asyncHandler(async (req, res) => {
+  const teacher = await User.findOne({ _id: req.params.id, role: "Teacher" })
+    .select(
+      "_id username fullName email phone role specialization experienceYears certification avatarUrl createdAt",
+    )
+    .lean();
+
+  if (!teacher) {
+    return res.status(404).json({ message: "Không tìm thấy giáo viên" });
+  }
+
+  const classes = await Class.find({ teacherId: teacher._id })
+    .select("_id className status schedule")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return res.json({
+    id: teacher._id,
+    username: teacher.username || "",
+    email: teacher.email || "",
+    fullName: teacher.fullName || "",
+    phone: teacher.phone || "",
+    specialization: teacher.specialization || "",
+    experienceYears: teacher.experienceYears || 0,
+    certificates: teacher.certification || "",
+    avatarUrl: teacher.avatarUrl || "",
+    status: "Active",
+    classes,
+    classCount: classes.length,
+  });
+});

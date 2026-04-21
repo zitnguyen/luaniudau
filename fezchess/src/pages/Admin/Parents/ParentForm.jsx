@@ -57,12 +57,18 @@ const ParentForm = () => {
     try {
       setSubmitting(true);
       setError(null);
+      let savedParent = null;
       if (isEditMode) {
-        await parentService.update(id, formData);
+        savedParent = await parentService.update(id, formData);
       } else {
-        await parentService.create(formData);
+        savedParent = await parentService.create(formData);
       }
-      navigate("/parents");
+      navigate("/parents", {
+        state: {
+          updatedParent: savedParent || null,
+          updatedAt: Date.now(),
+        },
+      });
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || "Có lỗi xảy ra");
