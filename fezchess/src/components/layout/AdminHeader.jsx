@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, HelpCircle, User, LogOut } from 'lucide-react';
+import { Bell, Home, User, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 import { getRoleLabel } from '../../constants/roleLabel';
@@ -21,8 +21,12 @@ const AdminHeader = () => {
 
   React.useEffect(() => {
     let isMounted = true;
-    const isRoleAllowedForSound = () => {
+    const getCurrentRole = () => {
       const role = String(currentUser?.role || '').toLowerCase();
+      return role;
+    };
+    const isRoleAllowedForSound = () => {
+      const role = getCurrentRole();
       return role === 'teacher' || role === 'parent' || role === 'student';
     };
     const shouldPlaySound = () =>
@@ -61,15 +65,50 @@ const AdminHeader = () => {
 
         previousUnreadRef.current = currentUnread;
         previousLatestUnreadRef.current = latestUnreadCreatedAt;
-      } catch {
-        if (isMounted) setUnreadCount(0);
+        return null;
+      } catch (error) {
+        return error?.response?.status || null;
       }
     };
-    fetchUnreadCount();
-    const timer = setInterval(fetchUnreadCount, 12000);
+
+    const userId = currentUser?._id || currentUser?.userId;
+    if (!userId) {
+      setUnreadCount(0);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    let timer = null;
+    let stopped = false;
+
+    const schedule = (delay) => {
+      if (stopped) return;
+      timer = window.setTimeout(tick, delay);
+    };
+
+    const tick = async () => {
+      const status = await fetchUnreadCount();
+      const role = getCurrentRole();
+      const isForeground = document.visibilityState === 'visible' && document.hasFocus();
+      const shouldPollSlowly = !isForeground || role === 'admin';
+      if (status === 429) {
+        schedule(60000);
+      } else if (shouldPollSlowly) {
+        schedule(30000);
+      } else {
+        schedule(12000);
+      }
+    };
+
+    tick();
+
     return () => {
       isMounted = false;
-      clearInterval(timer);
+      stopped = true;
+      if (timer) {
+        window.clearTimeout(timer);
+      }
     };
   }, [currentUser?._id, currentUser?.userId, currentUser?.role]);
 
@@ -88,8 +127,15 @@ const AdminHeader = () => {
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 h-16 px-6 flex items-center justify-end gap-4 sticky top-0 z-20">
+    <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 h-16 px-6 flex items-center justify-end gap-4 sticky top-0 z-20">
         <ThemeToggle />
+        <button
+          onClick={() => navigate('/')}
+          className="p-2 text-gray-400 dark:text-slate-300 hover:text-gray-600 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+          title="Về trang chủ website"
+        >
+          <Home size={20} />
+        </button>
         <button
           onClick={() => navigate(getNotificationPath())}
           onDoubleClick={() => {
@@ -100,23 +146,23 @@ const AdminHeader = () => {
               }
             });
           }}
-          className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors relative"
+          className="p-2 text-gray-400 dark:text-slate-300 hover:text-gray-600 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative"
           title="Notifications (double-click để test âm thanh)"
         >
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] rounded-full border border-white flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] rounded-full border border-white dark:border-slate-900 flex items-center justify-center">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
         </button>
-        <div className="h-8 w-[1px] bg-gray-200 mx-1"></div>
+        <div className="h-8 w-[1px] bg-gray-200 dark:bg-slate-700 mx-1"></div>
         <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
-                <div className="text-sm font-medium text-gray-900">
+                <div className="text-sm font-medium text-gray-900 dark:text-white">
                   {currentUser?.fullName || currentUser?.username || "User"}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 dark:text-slate-300">
                   {getRoleLabel(currentUser?.role)}
                 </div>
             </div>
@@ -125,7 +171,7 @@ const AdminHeader = () => {
             </div>
             <button 
                 onClick={handleLogout}
-                className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors ml-1"
+                className="p-2 text-gray-400 dark:text-slate-300 hover:text-red-600 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors ml-1"
                 title="Đăng xuất"
             >
                 <LogOut size={18} />

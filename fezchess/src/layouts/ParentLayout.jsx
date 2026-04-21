@@ -1,14 +1,22 @@
 import React from 'react';
+import { useLocation } from "react-router-dom";
 import ParentSidebar from '../components/layout/Sidebar/ParentSidebar';
 import AdminHeader from '../components/layout/AdminHeader';
 
 const ParentLayout = ({ children }) => {
+  const location = useLocation();
+  const contentRef = React.useRef(null);
+
+  React.useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [location.pathname]);
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
+    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
       <ParentSidebar />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div className="flex-1 flex flex-col">
         <AdminHeader />
-        <main style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
+        <main ref={contentRef} className="flex-1 p-6 overflow-y-auto">
           {children}
         </main>
       </div>

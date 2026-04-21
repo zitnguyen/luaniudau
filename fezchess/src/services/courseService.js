@@ -10,7 +10,8 @@ const courseService = {
     const data = await axiosClient.get(`/courses/${slug}`);
     return {
         course: data,
-        curriculum: data.chapters || []
+        curriculum: data.chapters || [],
+        canViewContent: Boolean(data?.canViewContent),
     };
   },
 
@@ -26,6 +27,26 @@ const courseService = {
   getCourseById: async (id) => {
       return await axiosClient.get(`/courses/id/${id}`); 
   },
+  getCourseAccess: async (id) => {
+      try {
+          return await axiosClient.get(`/courses/id/${id}/access`);
+      } catch (error) {
+          if (error?.response?.status === 404) {
+              return await axiosClient.get(`/courses/${id}/access`);
+          }
+          throw error;
+      }
+  },
+  setCourseAccess: async (id, userIds) => {
+      try {
+          return await axiosClient.put(`/courses/id/${id}/access`, { userIds });
+      } catch (error) {
+          if (error?.response?.status === 404) {
+              return await axiosClient.put(`/courses/${id}/access`, { userIds });
+          }
+          throw error;
+      }
+  },
 
   // Chapters & Lessons
   addChapter: async (chapterData) => {
@@ -38,7 +59,15 @@ const courseService = {
 
   getLessonById: async (id) => {
       return await axiosClient.get(`/lessons/${id}`);
-  }
+  },
+  uploadImage: async (file) => {
+      const formData = new FormData();
+      formData.append("image", file);
+      const data = await axiosClient.post("/upload/course-image", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data?.url;
+  },
 };
 
 export default courseService;

@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
+import React from "react";
 import ScrollReveal from "../common/ScrollReveal";
 import { StarIcon } from "@heroicons/react/24/solid";
+import testimonialService from "../../services/testimonialService";
+import { usePublicCms } from "../../context/PublicCmsContext";
 
 const testimonials = [
   {
@@ -36,27 +39,48 @@ const testimonials = [
 ];
 
 const TestimonialSection = () => {
+  const [items, setItems] = React.useState(testimonials);
+  const { cms } = usePublicCms();
+  const section = cms?.home?.testimonials || {};
+
+  React.useEffect(() => {
+    let mounted = true;
+    const fetchItems = async () => {
+      try {
+        const data = await testimonialService.getPublic();
+        if (!mounted) return;
+        setItems(Array.isArray(data) && data.length > 0 ? data : testimonials);
+      } catch {
+        if (mounted) setItems(testimonials);
+      }
+    };
+    fetchItems();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
         {/* Header */}
         <ScrollReveal className="text-center mb-16">
           <span className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
-            Phản hồi
+            {section?.badge || "Phản hồi"}
           </span>
           <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Phụ huynh nói gì về chúng tôi
+            {section?.title || "Phụ huynh nói gì về chúng tôi"}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Sự tin tưởng và hài lòng của phụ huynh là động lực để chúng tôi
-            không ngừng hoàn thiện.
+            {section?.description ||
+              "Sự tin tưởng và hài lòng của phụ huynh là động lực để chúng tôi không ngừng hoàn thiện."}
           </p>
         </ScrollReveal>
 
         {/* Testimonials Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {testimonials.map((testimonial, index) => (
-            <ScrollReveal key={testimonial.id} delay={index * 0.1}>
+          {items.map((testimonial, index) => (
+            <ScrollReveal key={testimonial._id || testimonial.id} delay={index * 0.1}>
               <motion.div
                 whileHover={{ y: -5 }}
                 className="bg-card p-6 rounded-xl border border-border shadow-sm"
@@ -79,6 +103,10 @@ const TestimonialSection = () => {
                     src={testimonial.image}
                     alt={testimonial.name}
                     className="w-12 h-12 rounded-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=100&h=100&fit=crop&crop=face";
+                    }}
                   />
                   <div>
                     <div className="font-semibold text-foreground">

@@ -8,6 +8,11 @@ const defaultSettings = {
   hotline: "",
   email: "",
   workingHours: "",
+  bankName: "Techcombank",
+  bankAccountNumber: "",
+  bankAccountName: "",
+  paymentQrUrl: "",
+  paymentTransferPrefix: "KHOAHOC",
 };
 
 const SystemSettingsContext = createContext({

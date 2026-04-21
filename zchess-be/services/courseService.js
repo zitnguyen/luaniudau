@@ -6,6 +6,8 @@ const Course = require("../models/Course");
 const Chapter = require("../models/Chapter");
 const Lesson = require("../models/Lesson");
 const Order = require("../models/Order");
+const Student = require("../models/Student");
+const CourseAccess = require("../models/CourseAccess");
 const AppError = require("../utils/AppError");
 const mongoose = require("mongoose");
 
@@ -32,6 +34,7 @@ exports.createCourse = async (data, userId) => {
     category,
     tags,
     thumbnail,
+    heroBackground,
     isPublished,
   } = data;
 
@@ -51,6 +54,7 @@ exports.createCourse = async (data, userId) => {
     category,
     tags,
     thumbnail,
+    heroBackground,
     instructor: userId,
     isPublished,
   });
@@ -72,13 +76,105 @@ exports.getAllCourses = async (query) => {
     ];
   }
 
-  return Course.find(filter)
+  const courses = await Course.find(filter)
     .populate("instructor", "fullName avatar")
     .select("-description")
     .sort("-createdAt");
+
+  if (!courses.length) return courses;
+
+  const courseIds = courses.map((course) => course._id);
+  const enrolledStats = await Order.aggregate([
+    {
+      $match: {
+        status: "completed",
+        "items.courseId": { $in: courseIds },
+      },
+    },
+    { $unwind: "$items" },
+    {
+      $match: {
+        "items.courseId": { $in: courseIds },
+      },
+    },
+    {
+      $group: {
+        _id: "$items.courseId",
+        buyers: { $addToSet: "$userId" },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        enrolledStudents: { $size: "$buyers" },
+      },
+    },
+  ]);
+
+  const enrolledMap = new Map(
+    enrolledStats.map((item) => [String(item._id), Number(item.enrolledStudents || 0)]),
+  );
+
+  const lessonStats = await Lesson.aggregate([
+    {
+      $match: {
+        courseId: { $in: courseIds },
+      },
+    },
+    {
+      $group: {
+        _id: "$courseId",
+        totalLessons: { $sum: 1 },
+        totalDuration: { $sum: { $ifNull: ["$duration", 0] } },
+      },
+    },
+  ]);
+
+  const lessonMap = new Map(
+    lessonStats.map((item) => [
+      String(item._id),
+      {
+        totalLessons: Number(item.totalLessons || 0),
+        totalDuration: Number(item.totalDuration || 0),
+      },
+    ]),
+  );
+
+  return courses.map((course) => ({
+    ...course.toObject(),
+    totalLessons:
+      lessonMap.get(String(course._id))?.totalLessons ??
+      Number(course.totalLessons || 0),
+    totalDuration:
+      lessonMap.get(String(course._id))?.totalDuration ??
+      Number(course.totalDuration || 0),
+    enrolledStudents: enrolledMap.get(String(course._id)) || 0,
+  }));
 };
 
-exports.getCourseBySlug = async (slug) => {
+const canViewCourseContent = async (courseId, user) => {
+  if (!user) return false;
+  const role = String(user.role || "").toLowerCase();
+  if (role === "admin") return true;
+
+  const directAccess = await CourseAccess.exists({ courseId, userId: user._id });
+  if (directAccess) return true;
+
+  if (role === "parent") {
+    const linkedGrantedStudent = await Student.exists({
+      parentId: user._id,
+      _id: {
+        $in: await CourseAccess.find({ courseId })
+          .distinct("userId"),
+      },
+      isDeleted: { $ne: true },
+    });
+    return Boolean(linkedGrantedStudent);
+  }
+  return false;
+};
+
+exports.getCourseBySlug = async (slug, user) => {
   const isObjectId = /^[0-9a-fA-F]{24}$/.test(String(slug));
   const course = await (isObjectId
     ? Course.findById(slug)
@@ -92,9 +188,19 @@ exports.getCourseBySlug = async (slug) => {
   }
 
   const chapters = await Chapter.find({ courseId: course._id }).sort("order");
+  const canViewContent = await canViewCourseContent(course._id, user);
   const courseContent = await Promise.all(
     chapters.map(async (chapter) => {
       const lessons = await Lesson.find({ chapterId: chapter._id }).sort("order");
+      if (!canViewContent) {
+        return {
+          _id: chapter._id,
+          title: chapter.title,
+          order: chapter.order,
+          lessonCount: lessons.length,
+          lessons: [],
+        };
+      }
       return {
         ...chapter.toObject(),
         lessons,
@@ -105,6 +211,7 @@ exports.getCourseBySlug = async (slug) => {
   return {
     ...course.toObject(),
     chapters: courseContent,
+    canViewContent,
   };
 };
 
@@ -133,10 +240,47 @@ exports.getCourseById = async (id) => {
     }),
   );
 
+  const accessUserIds = await CourseAccess.find({ courseId: course._id }).distinct(
+    "userId",
+  );
+
   return {
     ...course.toObject(),
     chapters: courseContent,
+    accessUserIds: accessUserIds.map((item) => String(item)),
   };
+};
+
+exports.getCourseAccess = async (courseId) => {
+  const accessList = await CourseAccess.find({ courseId }).populate(
+    "userId",
+    "_id fullName username email role",
+  );
+  return accessList.map((item) => item.userId).filter(Boolean);
+};
+
+exports.setCourseAccess = async (courseId, userIds, grantedBy) => {
+  const sanitizedIds = Array.from(
+    new Set(
+      (Array.isArray(userIds) ? userIds : [])
+        .map((id) => String(id || "").trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id)),
+    ),
+  );
+
+  await CourseAccess.deleteMany({ courseId });
+  if (sanitizedIds.length === 0) return [];
+
+  await CourseAccess.insertMany(
+    sanitizedIds.map((userId) => ({
+      courseId,
+      userId,
+      grantedBy,
+    })),
+    { ordered: false },
+  );
+
+  return CourseAccess.find({ courseId }).distinct("userId");
 };
 
 exports.updateCourse = async (id, body) => {

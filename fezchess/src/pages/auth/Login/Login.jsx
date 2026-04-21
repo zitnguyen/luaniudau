@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import authService from '../../../services/authService';
 import { motion } from 'framer-motion';
 import { User, Lock, ArrowRight, Loader2 } from 'lucide-react';
@@ -10,6 +10,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -17,20 +18,9 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const user = await authService.login({ username, password });
-      
-      // Redirect based on role
-      if (user.role === 'Admin') {
-        navigate('/dashboard');
-      } else if (user.role === 'Teacher') {
-        navigate('/teacher/dashboard');
-      } else if (user.role === 'Parent') {
-        navigate('/parent/schedule');
-      } else if (user.role === 'Student') {
-        navigate('/student/dashboard');
-      } else {
-        navigate('/');
-      }
+      await authService.login({ username, password });
+      const fromPath = location.state?.from?.pathname;
+      navigate(fromPath || "/", { replace: true });
     } catch (err) {
       console.error("Login failed", err);
       setError('Tên đăng nhập hoặc mật khẩu không đúng');

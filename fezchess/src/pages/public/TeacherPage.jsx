@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from "react";
 import teacherService from "../../services/teacherService";
 import { useNavigate } from "react-router-dom";
+import { usePublicCms } from "../../context/PublicCmsContext";
 
 const TeacherPage = () => {
   const navigate = useNavigate();
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { cms } = usePublicCms();
+  const page = cms?.teachersPage || {};
+  const theme = cms?.theme || {};
 
   useEffect(() => {
     const fetchTeachers = async () => {
@@ -26,14 +30,22 @@ const TeacherPage = () => {
 
   return (
     <div className="bg-white">
-      <div className="bg-gray-50 py-20">
+      <div
+        className="py-20"
+        style={{
+          backgroundColor: page?.heroBackground ? undefined : "#F9FAFB",
+          backgroundImage: page?.heroBackground ? `url(${page.heroBackground})` : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Đội Ngũ Giảng Viên
+            {page?.title || "Đội Ngũ Giảng Viên"}
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Gặp gỡ những Kiện tướng, Huấn luyện viên tâm huyết và giàu kinh
-            nghiệm của chúng tôi.
+            {page?.description ||
+              "Gặp gỡ những Kiện tướng, Huấn luyện viên tâm huyết và giàu kinh nghiệm của chúng tôi."}
           </p>
         </div>
       </div>
@@ -92,6 +104,7 @@ const TeacherPage = () => {
                 <button
                   onClick={() => navigate(`/teachers/${teacher._id}`)}
                   className="mt-4 w-full px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 text-sm font-medium"
+                  style={{ borderRadius: theme?.buttonRadius || undefined }}
                 >
                   Xem chi tiết
                 </button>

@@ -3,9 +3,13 @@ import { motion } from "framer-motion";
 import ScrollReveal from "../common/ScrollReveal";
 import Spinner from "../common/Spinner";
 import { useSystemSettings } from "../../context/SystemSettingsContext";
+import { usePublicCms } from "../../context/PublicCmsContext";
 
 const ContactSection = () => {
   const { settings } = useSystemSettings();
+  const { cms } = usePublicCms();
+  const section = cms?.home?.contact || {};
+  const theme = cms?.theme || {};
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -74,15 +78,15 @@ const ContactSection = () => {
           {/* Left - Info */}
           <ScrollReveal direction="left">
             <span className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
-              Liên hệ
+              {section?.badge || "Liên hệ"}
             </span>
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Đăng ký học thử{" "}
+              {section?.title || "Đăng ký học thử"}{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-600">miễn phí</span>
             </h2>
             <p className="text-muted-foreground mb-8">
-              Điền thông tin bên dưới và chúng tôi sẽ liên hệ bạn trong vòng 24
-              giờ để sắp xếp buổi học thử cho con.
+              {section?.description ||
+                "Điền thông tin bên dưới và chúng tôi sẽ liên hệ bạn trong vòng 24 giờ để sắp xếp buổi học thử cho con."}
             </p>
 
             <div className="space-y-6">
@@ -233,6 +237,7 @@ const ContactSection = () => {
                   type="submit"
                   disabled={isLoading}
                   className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-70"
+                  style={{ borderRadius: theme?.buttonRadius || undefined }}
                 >
                   {isLoading ? (
                     <>

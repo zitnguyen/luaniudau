@@ -427,7 +427,7 @@ const Schedule = () => {
                 </div>
             </div>
             
-            <style jsx global>{`
+            <style>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 8px;
                     height: 8px;

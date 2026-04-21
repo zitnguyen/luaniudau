@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import courseService from '../../../services/courseService';
-import { Save, ArrowLeft, Layout, List } from 'lucide-react';
+import { Save, ArrowLeft, Layout, List, ImagePlus, Loader2 } from 'lucide-react';
 import ChapterManager from './components/ChapterManager';
+import userService from '../../../services/userService';
+import studentService from '../../../services/studentService';
+import parentService from '../../../services/parentService';
 
 const AdminCourseForm = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const isEditMode = !!id;
 
-    const [activeTab, setActiveTab] = useState('info'); // 'info' or 'curriculum'
+    const [activeTab, setActiveTab] = useState('info'); // 'info' | 'curriculum' | 'access'
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
     const [error, setError] = useState('');
+    const [users, setUsers] = useState([]);
+    const [accessUserIds, setAccessUserIds] = useState([]);
+    const [savingAccess, setSavingAccess] = useState(false);
+    const [uploadingField, setUploadingField] = useState("");
     
     // Basic Info State
     const [formData, setFormData] = useState({
@@ -24,14 +31,65 @@ const AdminCourseForm = () => {
         level: 'All Levels',
         category: 'General',
         thumbnail: '',
+        heroBackground: '',
         isPublished: false
     });
 
     useEffect(() => {
         if (isEditMode) {
             fetchCourse();
+            fetchUsersAndAccess();
         }
     }, [id]);
+
+    const fetchUsersAndAccess = async () => {
+        try {
+            // Primary source: admin users endpoint (all roles)
+            const usersData = await userService.getAll();
+            setUsers(Array.isArray(usersData) ? usersData : []);
+        } catch (e) {
+            console.error("Error loading user list from /users:", e);
+            // Fallback source: combine students + parents endpoints
+            try {
+                const [students, parents] = await Promise.all([
+                    studentService.getAll(),
+                    parentService.getAll(),
+                ]);
+                const mappedStudents = (Array.isArray(students) ? students : []).map((s) => ({
+                    _id: s._id,
+                    fullName: s.fullName,
+                    username: s.studentId || s.fullName,
+                    email: s.email || "",
+                    role: "Student",
+                }));
+                const mappedParents = (Array.isArray(parents) ? parents : []).map((p) => ({
+                    _id: p._id,
+                    fullName: p.fullName,
+                    username: p.username,
+                    email: p.email || "",
+                    role: "Parent",
+                }));
+                setUsers([...mappedStudents, ...mappedParents]);
+            } catch (fallbackError) {
+                console.error("Fallback user list failed:", fallbackError);
+                setUsers([]);
+            }
+        }
+
+        try {
+            const accessData = await courseService.getCourseAccess(id);
+            const allowed = Array.isArray(accessData?.users) ? accessData.users : [];
+            setAccessUserIds(allowed.map((u) => String(u._id)));
+        } catch (e) {
+            console.error("Error loading current access list:", e);
+            setAccessUserIds([]);
+        }
+    };
+
+    const assignableUsers = users.filter((u) => {
+        const role = String(u.role || "").toLowerCase();
+        return role === "student" || role === "parent";
+    });
 
     const fetchCourse = async () => {
         try {
@@ -47,6 +105,7 @@ const AdminCourseForm = () => {
                 level: data?.level ?? 'All Levels',
                 category: data?.category ?? 'General',
                 thumbnail: data?.thumbnail ?? '',
+                heroBackground: data?.heroBackground ?? '',
                 isPublished: Boolean(data?.isPublished)
             });
 
@@ -98,6 +157,44 @@ const AdminCourseForm = () => {
             alert("Lỗi khi lưu khóa học: " + message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const toggleAccessUser = (userId) => {
+        setAccessUserIds((prev) =>
+            prev.includes(userId)
+                ? prev.filter((id) => id !== userId)
+                : [...prev, userId],
+        );
+    };
+
+    const saveAccess = async () => {
+        try {
+            setSavingAccess(true);
+            await courseService.setCourseAccess(id, accessUserIds);
+            alert("Đã cập nhật quyền xem nội dung khóa học.");
+        } catch (e) {
+            const status = e?.response?.status;
+            const msg = e?.response?.data?.message || e?.message || "Không lưu được phân quyền.";
+            alert(`[${status || "ERR"}] ${msg}`);
+        } finally {
+            setSavingAccess(false);
+        }
+    };
+
+    const handleCourseImagePick = async (field, event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+            setUploadingField(field);
+            const uploadedUrl = await courseService.uploadImage(file);
+            if (!uploadedUrl) throw new Error("Không lấy được URL ảnh");
+            setFormData((prev) => ({ ...prev, [field]: uploadedUrl }));
+        } catch (error) {
+            alert(error?.response?.data?.message || error.message || "Upload ảnh thất bại.");
+        } finally {
+            setUploadingField("");
+            event.target.value = "";
         }
     };
 
@@ -167,6 +264,20 @@ const AdminCourseForm = () => {
                 >
                     <List className="w-4 h-4" />
                     Chương Trình Học
+                </button>
+                <button
+                    onClick={() => {
+                        if (!isEditMode) {
+                            alert("Vui lòng lưu khóa học trước khi phân quyền.");
+                            return;
+                        }
+                        setActiveTab('access');
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                        activeTab === 'access' ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                >
+                    Phân quyền xem
                 </button>
             </div>
 
@@ -272,11 +383,57 @@ const AdminCourseForm = () => {
                              <h3 className="font-bold text-gray-900 mb-4">Hình Ảnh</h3>
                              <div className="mb-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">URL Ảnh thu nhỏ</label>
+                                <div className="mb-2">
+                                    <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+                                        {uploadingField === "thumbnail" ? (
+                                            <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                            <ImagePlus size={16} />
+                                        )}
+                                        <span className="text-sm">
+                                            {uploadingField === "thumbnail" ? "Đang upload..." : "Tải ảnh từ máy"}
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/png,image/jpeg"
+                                            className="hidden"
+                                            onChange={(e) => handleCourseImagePick("thumbnail", e)}
+                                        />
+                                    </label>
+                                </div>
                                 <input
                                     type="text"
                                     className="w-full p-2 border border-gray-200 rounded-lg text-sm"
                                     value={formData.thumbnail}
                                     onChange={(e) => setFormData({...formData, thumbnail: e.target.value})}
+                                    placeholder="https://..."
+                                />
+                             </div>
+                             <div className="mb-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">URL Nền header khóa học</label>
+                                <div className="mb-2">
+                                    <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+                                        {uploadingField === "heroBackground" ? (
+                                            <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                            <ImagePlus size={16} />
+                                        )}
+                                        <span className="text-sm">
+                                            {uploadingField === "heroBackground" ? "Đang upload..." : "Tải ảnh nền từ máy"}
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/png,image/jpeg"
+                                            className="hidden"
+                                            onChange={(e) => handleCourseImagePick("heroBackground", e)}
+                                        />
+                                    </label>
+                                </div>
+                                <input
+                                    type="text"
+                                    className="w-full p-2 border border-gray-200 rounded-lg text-sm"
+                                    value={formData.heroBackground}
+                                    onChange={(e) => setFormData({...formData, heroBackground: e.target.value})}
                                     placeholder="https://..."
                                 />
                              </div>
@@ -286,8 +443,44 @@ const AdminCourseForm = () => {
                          </div>
                     </div>
                 </div>
-            ) : (
+            ) : activeTab === 'curriculum' ? (
                 <ChapterManager courseId={id} />
+            ) : (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-semibold mb-2">Phân quyền nội dung khóa học</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                        Admin luôn xem được nội dung. Chọn user được phép xem bài học của khóa này.
+                    </p>
+                    <div className="max-h-[420px] overflow-auto border rounded-lg divide-y">
+                        {assignableUsers.map((u) => (
+                            <label key={u._id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={accessUserIds.includes(String(u._id))}
+                                    onChange={() => toggleAccessUser(String(u._id))}
+                                />
+                                <span className="font-medium text-gray-800">
+                                    {u.fullName || u.username}
+                                </span>
+                                <span className="text-gray-500">
+                                    ({u.role} - {u.email || u.username})
+                                </span>
+                            </label>
+                        ))}
+                        {assignableUsers.length === 0 && (
+                            <div className="px-4 py-6 text-sm text-gray-500">Chưa có user.</div>
+                        )}
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                        <button
+                            onClick={saveAccess}
+                            disabled={savingAccess}
+                            className="px-4 py-2 rounded-lg bg-primary text-white disabled:opacity-60"
+                        >
+                            {savingAccess ? "Đang lưu..." : "Lưu phân quyền"}
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );

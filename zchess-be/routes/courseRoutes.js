@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const courseController = require("../controllers/courseController");
-const { protect, authorize } = require("../middleware/authMiddleware");
+const { protect, authorize, optionalProtect } = require("../middleware/authMiddleware");
 
 // Public
 router.get("/", courseController.getAllCourses);
@@ -12,7 +12,31 @@ router.get(
   authorize("Admin", "Teacher"),
   courseController.getCourseById,
 );
-router.get("/:slug", courseController.getCourseBySlug);
+router.get(
+  "/id/:id/access",
+  protect,
+  authorize("Admin"),
+  courseController.getCourseAccess,
+);
+router.get(
+  "/:id/access",
+  protect,
+  authorize("Admin"),
+  courseController.getCourseAccess,
+);
+router.put(
+  "/id/:id/access",
+  protect,
+  authorize("Admin"),
+  courseController.setCourseAccess,
+);
+router.put(
+  "/:id/access",
+  protect,
+  authorize("Admin"),
+  courseController.setCourseAccess,
+);
+router.get("/:slug", optionalProtect, courseController.getCourseBySlug);
 
 // Protected (Admin/Teacher)
 router.post("/", protect, authorize("Admin", "Teacher"), courseController.createCourse);

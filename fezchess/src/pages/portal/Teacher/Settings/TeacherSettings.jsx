@@ -43,10 +43,20 @@ const TeacherSettings = () => {
 
   useEffect(() => {
     let cancelled = false;
+    const forceStopTimer = window.setTimeout(() => {
+      if (!cancelled) {
+        setLoadProfile(false);
+      }
+    }, 8000);
     const run = async () => {
       try {
         setLoadProfile(true);
-        const data = await teacherService.getMyProfile();
+        const data = await Promise.race([
+          teacherService.getMyProfile(),
+          new Promise((_, reject) =>
+            window.setTimeout(() => reject(new Error("PROFILE_TIMEOUT")), 7000),
+          ),
+        ]);
         if (cancelled || !data) return;
         setAccount({
           username: data.username || "",
@@ -64,14 +74,29 @@ const TeacherSettings = () => {
           avatarUrl: data.avatarUrl || "",
         });
       } catch (e) {
+        const cachedUser = authService.getCurrentUser();
+        if (cachedUser) {
+          setAccount({
+            username: cachedUser.username || "",
+            email: cachedUser.email || "",
+          });
+          setProfile((prev) => ({
+            ...prev,
+            fullName: cachedUser.fullName || "",
+            phone: cachedUser.phone || "",
+            avatarUrl: cachedUser.avatarUrl || "",
+          }));
+        }
         toast.error(e?.response?.data?.message || "Không tải được hồ sơ");
       } finally {
+        window.clearTimeout(forceStopTimer);
         if (!cancelled) setLoadProfile(false);
       }
     };
     run();
     return () => {
       cancelled = true;
+      window.clearTimeout(forceStopTimer);
     };
   }, []);
 

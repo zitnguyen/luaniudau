@@ -9,6 +9,9 @@ router.use(protect);
 router.use(authorize("Teacher", "Admin"));
 
 router.get("/dashboard", teacherController.getTeacherDashboard);
+router.get("/me", authorize("Teacher"), teacherController.getMyProfile);
+router.patch("/me", authorize("Teacher"), teacherController.updateMyProfile);
+router.post("/me/change-password", authorize("Teacher"), teacherController.changeMyPassword);
 router.get("/classes", teacherController.getTeacherClasses);
 router.get("/students", teacherController.getTeacherStudents);
 router.get("/attendance", teacherController.getTeacherAttendance);

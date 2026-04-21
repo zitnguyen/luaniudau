@@ -5,6 +5,7 @@ const courseSchema = new mongoose.Schema({
   slug: { type: String, required: true, unique: true, trim: true },
   description: { type: String, required: true },
   thumbnail: { type: String }, // URL to image
+  heroBackground: { type: String, trim: true },
   price: { type: Number, required: true, default: 0 },
   salePrice: { type: Number, default: 0 },
   level: { 

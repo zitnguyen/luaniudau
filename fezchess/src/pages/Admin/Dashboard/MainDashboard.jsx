@@ -36,10 +36,31 @@ const MainDashboard = () => {
   const [studentGrowth, setStudentGrowth] = useState("0%");
   const [enrollmentGrowth, setEnrollmentGrowth] = useState("0%");
   const [newEnrollmentsCount, setNewEnrollmentsCount] = useState(0);
+  const [revenueChartWidth, setRevenueChartWidth] = useState(0);
+  const [levelChartWidth, setLevelChartWidth] = useState(0);
+  const revenueChartRef = React.useRef(null);
+  const levelChartRef = React.useRef(null);
 
   // Fetch data from backend
   useEffect(() => {
     fetchDashboardData();
+  }, []);
+
+  useEffect(() => {
+    const measureCharts = () => {
+      const revenueWidth = revenueChartRef.current?.clientWidth || 0;
+      const levelWidth = levelChartRef.current?.clientWidth || 0;
+      setRevenueChartWidth(revenueWidth);
+      setLevelChartWidth(levelWidth);
+    };
+
+    measureCharts();
+    window.addEventListener("resize", measureCharts);
+    const timer = window.setTimeout(measureCharts, 0);
+    return () => {
+      window.removeEventListener("resize", measureCharts);
+      window.clearTimeout(timer);
+    };
   }, []);
 
   const fetchDashboardData = async () => {
@@ -245,7 +266,8 @@ const MainDashboard = () => {
             <h3 className="text-lg font-bold text-gray-900">Doanh thu 6 tháng gần nhất</h3>
             <div className="text-xs font-medium text-gray-400 bg-gray-50 px-3 py-1 rounded-full">6 tháng qua</div>
           </div>
-          <div className="h-[300px] w-full">
+          <div ref={revenueChartRef} className="h-[300px] w-full min-w-0 min-h-[300px]">
+            {revenueChartWidth > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={revenueData} barSize={40} barGap={8}>
                 <XAxis 
@@ -275,6 +297,9 @@ const MainDashboard = () => {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full" />
+            )}
           </div>
         </div>
 
@@ -283,7 +308,8 @@ const MainDashboard = () => {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-900">Phân bổ trình độ</h3>
           </div>
-          <div className="flex-1 flex flex-col justify-center items-center relative min-h-[250px]">
+          <div ref={levelChartRef} className="flex-1 flex flex-col justify-center items-center relative min-h-[250px] min-w-0">
+              {levelChartWidth > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie
@@ -303,6 +329,9 @@ const MainDashboard = () => {
                   <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                 </PieChart>
               </ResponsiveContainer>
+              ) : (
+                <div className="h-[220px] w-full" />
+              )}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <div className="text-3xl font-bold text-gray-900">{totalStudents}</div>
                 <div className="text-sm font-medium text-gray-400">Học viên</div>

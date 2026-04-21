@@ -10,6 +10,7 @@ router.get("/course/:courseId", reviewController.getReviews);
 router.post("/", protect, reviewController.createReview);
 
 // Protected: Admin only can delete (moderation)
+router.put("/:id", protect, authorize("Admin"), reviewController.updateReview);
 router.delete("/:id", protect, authorize("Admin"), reviewController.deleteReview);
 
 module.exports = router;

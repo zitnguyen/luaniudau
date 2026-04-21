@@ -37,11 +37,11 @@ const TeacherSidebar = ({ isOpen, onClose }) => {
     `group flex items-center gap-3 px-3 py-2.5 min-h-12 rounded-xl text-[15px] md:text-sm font-medium transition-all duration-200 ${
       isActive
         ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        : "text-gray-600 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white"
     }`;
 
   const iconClass = (isActive) =>
-    isActive ? "text-white" : "text-gray-500 group-hover:text-gray-700";
+    isActive ? "text-white" : "text-gray-500 dark:text-slate-400 group-hover:text-gray-700 dark:group-hover:text-white";
 
   const handleClose = () => {
     if (onClose) onClose();
@@ -57,7 +57,7 @@ const TeacherSidebar = ({ isOpen, onClose }) => {
       ></div>
 
       <div
-        className={`fixed top-0 left-0 bottom-0 h-screen w-[82vw] max-w-72 md:w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 md:translate-x-0 ${
+        className={`fixed top-0 left-0 bottom-0 h-screen w-[82vw] max-w-72 md:w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 z-50 transform transition-transform duration-300 md:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } flex flex-col`}
       >
@@ -83,14 +83,14 @@ const TeacherSidebar = ({ isOpen, onClose }) => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-100 mt-auto">
+        <div className="p-4 border-t border-gray-100 dark:border-slate-700 mt-auto">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors group"
+            className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 rounded-xl transition-colors group"
           >
             <LogOut
               size={20}
-              className="text-gray-500 group-hover:text-red-500"
+              className="text-gray-500 dark:text-slate-400 group-hover:text-red-500"
             />
             <span>Đăng xuất</span>
           </button>

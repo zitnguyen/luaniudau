@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import courseService from '../../services/courseService';
 // import orderService from '../../services/orderService'; // Will be used in Detail page or cart
-import { PlayCircle, User, Search, Filter } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { PlayCircle, User, Search, Filter, BookOpen, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { usePublicCms } from '../../context/PublicCmsContext';
 
 const CourseStorePage = () => {
     const [courses, setCourses] = useState([]);
@@ -12,6 +13,9 @@ const CourseStorePage = () => {
         category: '',
         level: ''
     });
+    const { cms } = usePublicCms();
+    const page = cms?.courseStore || {};
+    const theme = cms?.theme || {};
 
     useEffect(() => {
         fetchCourses();
@@ -44,10 +48,18 @@ const CourseStorePage = () => {
     return (
         <div className="bg-gray-50 min-h-screen pb-20">
              {/* Header Section */}
-             <div className="bg-blue-900 text-white py-16 text-center mb-8">
-                  <h1 className="text-4xl font-bold mb-4 font-heading">KHO KHÓA HỌC VIDEO</h1>
+             <div
+               className="text-white py-16 text-center mb-8"
+               style={{
+                backgroundColor: page?.heroBackground ? undefined : (theme?.secondaryColor || "#1e3a8a"),
+                backgroundImage: page?.heroBackground ? `url(${page.heroBackground})` : undefined,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+               }}
+             >
+                  <h1 className="text-4xl font-bold mb-4 font-heading">{page?.title || "KHO KHÓA HỌC VIDEO"}</h1>
                   <p className="text-xl opacity-90 max-w-2xl mx-auto">
-                      Hệ thống bài giảng chất lượng cao, giúp bạn làm chủ bàn cờ từ Khai cuộc đến Tàn cuộc.
+                      {page?.description || "Hệ thống bài giảng chất lượng cao, giúp bạn làm chủ bàn cờ từ Khai cuộc đến Tàn cuộc."}
                   </p>
              </div>
 
@@ -128,14 +140,23 @@ const CourseStorePage = () => {
                                                 {course.title}
                                             </h3>
                                             
-                                            <div className="flex items-center justify-between text-sm text-gray-500 mt-4 pt-4 border-t border-gray-100">
-                                                <div className="flex items-center gap-2">
-                                                    <User size={16} />
-                                                    <span>{course.instructor?.fullName || 'Daisy Team'}</span>
+                                            <div className="space-y-2 text-sm text-gray-500 mt-4 pt-4 border-t border-gray-100">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <User size={16} />
+                                                        <span>{course.instructor?.fullName || 'Daisy Team'}</span>
+                                                    </div>
                                                 </div>
-                                                {/* <div className="flex items-center gap-1 text-yellow-500">
-                                                    <span>★</span> <span>4.8</span>
-                                                </div> */}
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <BookOpen size={16} />
+                                                        <span>{course.totalLessons || 0} bài học</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Users size={16} />
+                                                        <span>{course.enrolledStudents || 0} học viên</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </Link>

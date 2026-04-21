@@ -33,8 +33,6 @@ export const initNotificationSound = () => {
   window.addEventListener("click", onUserGesture, { passive: true });
   window.addEventListener("keydown", onUserGesture, { passive: true });
   window.addEventListener("touchstart", onUserGesture, { passive: true });
-  // Attempt once on init as best effort.
-  unlockAudio();
 };
 
 const playBeep = async () => {

@@ -8,6 +8,7 @@ const SystemSettings = () => {
   const { settings, loading, refreshSettings, setSettingsOptimistic } = useSystemSettings();
   const [formData, setFormData] = useState(settings);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [qrUploading, setQrUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -53,6 +54,11 @@ const SystemSettings = () => {
         hotline: formData.hotline || "",
         email: formData.email || "",
         workingHours: formData.workingHours || "",
+        bankName: formData.bankName || "Techcombank",
+        bankAccountNumber: formData.bankAccountNumber || "",
+        bankAccountName: formData.bankAccountName || "",
+        paymentQrUrl: formData.paymentQrUrl || "",
+        paymentTransferPrefix: formData.paymentTransferPrefix || "KHOAHOC",
       };
       const saved = await settingsService.update(payload);
       setSettingsOptimistic(saved);
@@ -62,6 +68,24 @@ const SystemSettings = () => {
       toast.error(error?.response?.data?.message || "Cập nhật cấu hình thất bại");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleQrPick = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      setQrUploading(true);
+      const qrUrl = await settingsService.uploadPaymentQr(file);
+      if (!qrUrl) throw new Error("Không lấy được URL QR");
+      setFormData((prev) => ({ ...prev, paymentQrUrl: qrUrl }));
+      setSettingsOptimistic({ paymentQrUrl: qrUrl });
+      toast.success("Upload QR thành công");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message || "Upload QR thất bại");
+    } finally {
+      setQrUploading(false);
+      event.target.value = "";
     }
   };
 
@@ -124,6 +148,54 @@ const SystemSettings = () => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
           <textarea name="address" rows={3} value={formData.address || ""} onChange={handleChange} className="w-full rounded-lg border border-gray-200 px-3 py-2" />
+        </div>
+
+        <div className="border-t pt-5">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">Thông tin chuyển khoản</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ngân hàng</label>
+              <input name="bankName" value={formData.bankName || ""} onChange={handleChange} className="w-full rounded-lg border border-gray-200 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Số tài khoản</label>
+              <input name="bankAccountNumber" value={formData.bankAccountNumber || ""} onChange={handleChange} className="w-full rounded-lg border border-gray-200 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Chủ tài khoản</label>
+              <input name="bankAccountName" value={formData.bankAccountName || ""} onChange={handleChange} className="w-full rounded-lg border border-gray-200 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tiền tố nội dung chuyển khoản</label>
+              <input name="paymentTransferPrefix" value={formData.paymentTransferPrefix || ""} onChange={handleChange} className="w-full rounded-lg border border-gray-200 px-3 py-2" placeholder="KHOAHOC" />
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            <label className="block text-sm font-medium text-gray-700">QR chuyển khoản</label>
+            <div className="flex items-center gap-4">
+              <div className="w-24 h-24 rounded-xl border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                {formData.paymentQrUrl ? (
+                  <img src={formData.paymentQrUrl} alt="QR preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs text-gray-400">No QR</span>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+                  {qrUploading ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+                  <span className="text-sm">{qrUploading ? "Đang upload..." : "Chọn ảnh QR"}</span>
+                  <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleQrPick} />
+                </label>
+                <input
+                  name="paymentQrUrl"
+                  value={formData.paymentQrUrl || ""}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <button

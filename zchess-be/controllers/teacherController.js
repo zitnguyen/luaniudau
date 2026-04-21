@@ -4,6 +4,7 @@ const Enrollment = require("../models/Enrollment");
 const Attendance = require("../models/Attendance");
 const TeachingLog = require("../models/TeachingLog");
 const Progress = require("../models/Progress");
+const User = require("../models/User");
 
 const getTeacherClassIds = async (teacherId) => {
   const classes = await Class.find({ teacherId }).select("_id");
@@ -267,4 +268,97 @@ exports.updateTeacherAssessment = asyncHandler(async (req, res) => {
     runValidators: true,
   });
   res.json(updated);
+});
+
+exports.getMyProfile = asyncHandler(async (req, res) => {
+  const teacher = await User.findById(req.user._id).select(
+    "_id username email fullName phone specialization experienceYears certification avatarUrl role",
+  );
+  if (!teacher || teacher.role !== "Teacher") {
+    return res.status(404).json({ message: "Không tìm thấy hồ sơ giáo viên" });
+  }
+  res.json({
+    _id: teacher._id,
+    username: teacher.username || "",
+    email: teacher.email || "",
+    fullName: teacher.fullName || "",
+    phone: teacher.phone || "",
+    specialization: teacher.specialization || "",
+    experienceYears: teacher.experienceYears ?? null,
+    certificates: teacher.certification || "",
+    avatarUrl: teacher.avatarUrl || "",
+    role: teacher.role,
+  });
+});
+
+exports.updateMyProfile = asyncHandler(async (req, res) => {
+  const teacher = await User.findById(req.user._id);
+  if (!teacher || teacher.role !== "Teacher") {
+    return res.status(404).json({ message: "Không tìm thấy hồ sơ giáo viên" });
+  }
+
+  const {
+    fullName,
+    phone,
+    specialization,
+    certificates,
+    avatarUrl,
+    experienceYears,
+  } = req.body;
+
+  if (typeof fullName === "string") teacher.fullName = fullName;
+  if (typeof phone === "string") teacher.phone = phone;
+  if (typeof specialization === "string") teacher.specialization = specialization;
+  if (typeof certificates === "string") teacher.certification = certificates;
+  if (typeof avatarUrl === "string") teacher.avatarUrl = avatarUrl;
+  if (experienceYears === null || experienceYears === "") {
+    teacher.experienceYears = undefined;
+  } else if (experienceYears !== undefined) {
+    const years = Number(experienceYears);
+    if (Number.isNaN(years) || years < 0) {
+      return res.status(400).json({ message: "Số năm kinh nghiệm không hợp lệ" });
+    }
+    teacher.experienceYears = years;
+  }
+
+  await teacher.save();
+
+  res.json({
+    _id: teacher._id,
+    username: teacher.username || "",
+    email: teacher.email || "",
+    fullName: teacher.fullName || "",
+    phone: teacher.phone || "",
+    specialization: teacher.specialization || "",
+    experienceYears: teacher.experienceYears ?? null,
+    certificates: teacher.certification || "",
+    avatarUrl: teacher.avatarUrl || "",
+    role: teacher.role,
+  });
+});
+
+exports.changeMyPassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res
+      .status(400)
+      .json({ message: "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới" });
+  }
+  if (String(newPassword).length < 6) {
+    return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự" });
+  }
+
+  const teacher = await User.findById(req.user._id);
+  if (!teacher || teacher.role !== "Teacher") {
+    return res.status(404).json({ message: "Không tìm thấy hồ sơ giáo viên" });
+  }
+
+  const matched = await teacher.matchPassword(currentPassword);
+  if (!matched) {
+    return res.status(400).json({ message: "Mật khẩu hiện tại không đúng" });
+  }
+
+  teacher.password = newPassword;
+  await teacher.save();
+  res.json({ message: "Đổi mật khẩu thành công" });
 });

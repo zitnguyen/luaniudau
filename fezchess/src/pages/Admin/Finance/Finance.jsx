@@ -8,13 +8,19 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie
 } from 'recharts';
 import financeService from '../../../services/financeService';
+import orderService from '../../../services/orderService';
 
 const Finance = () => {
+    const barChartRef = React.useRef(null);
+    const [barChartWidth, setBarChartWidth] = useState(0);
     const [financialStats, setFinancialStats] = useState([]);
     const [chartData, setChartData] = useState([]);
     const [costStructure, setCostStructure] = useState([]);
     const [transactions, setTransactions] = useState([]);
+    const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [updatingOrderId, setUpdatingOrderId] = useState("");
+    const [orderStatusFilter, setOrderStatusFilter] = useState("all");
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -36,11 +42,12 @@ const Finance = () => {
             setLoading(true);
             const { month, year } = selectedDate;
             
-            const [statsRes, chartRes, costRes, trxRes] = await Promise.all([
+            const [statsRes, chartRes, costRes, trxRes, orderRes] = await Promise.all([
                 financeService.getFinanceStats(month, year),
                 financeService.getFinanceChart(month, year),
                 financeService.getCostStructure(month, year),
-                financeService.getTransactions(month, year)
+                financeService.getTransactions(month, year),
+                orderService.getAll(),
             ]);
 
             // Transform Stats Data
@@ -50,15 +57,20 @@ const Finance = () => {
                     let icon = DollarSign;
                     let color = 'bg-blue-50 text-blue-600';
                     let trendColor = 'text-green-600';
-                    
-                    if (idx === 1) { // Expense
+                    const label = String(item?.label || "").toLowerCase();
+
+                    if (label.includes("chi phí")) {
                         icon = ShoppingCart;
                         color = 'bg-red-50 text-red-600';
                         trendColor = 'text-red-600';
-                    } else if (idx === 2) { // Profit
+                    } else if (label.includes("lợi nhuận")) {
                         icon = TrendingUp;
                         color = 'bg-green-50 text-green-600';
                         trendColor = 'text-green-600';
+                    } else if (label.includes("khóa học")) {
+                        icon = FileText;
+                        color = 'bg-indigo-50 text-indigo-600';
+                        trendColor = 'text-indigo-600';
                     }
 
                     return {
@@ -95,6 +107,8 @@ const Finance = () => {
                 setTransactions(formattedTrx);
             }
 
+            setOrders(Array.isArray(orderRes) ? orderRes : []);
+
         } catch (error) {
             console.error("Error fetching finance data:", error);
         } finally {
@@ -105,6 +119,20 @@ const Finance = () => {
     useEffect(() => {
         fetchAllData();
     }, [selectedDate]);
+
+    useEffect(() => {
+        const measureChart = () => {
+            const width = barChartRef.current?.clientWidth || 0;
+            setBarChartWidth(width);
+        };
+        measureChart();
+        window.addEventListener("resize", measureChart);
+        const timer = window.setTimeout(measureChart, 0);
+        return () => {
+            window.removeEventListener("resize", measureChart);
+            window.clearTimeout(timer);
+        };
+    }, []);
 
     const handleMonthChange = (e) => {
         const [month, year] = e.target.value.split('-');
@@ -220,6 +248,23 @@ const Finance = () => {
         setShowModal(true);
     };
 
+    const handleUpdateOrderStatus = async (orderId, status) => {
+        try {
+            setUpdatingOrderId(orderId);
+            await orderService.updateStatus(orderId, status);
+            await fetchAllData();
+        } catch (error) {
+            alert(error?.response?.data?.message || "Không cập nhật được trạng thái đơn hàng.");
+        } finally {
+            setUpdatingOrderId("");
+        }
+    };
+
+    const filteredOrders = orders.filter((order) => {
+        if (orderStatusFilter === "all") return true;
+        return String(order?.status || "") === orderStatusFilter;
+    });
+
     return (
         <div className="max-w-7xl mx-auto space-y-8 pb-10">
             {/* Header */}
@@ -310,19 +355,23 @@ const Finance = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData} barGap={8} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9CA3AF'}} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9CA3AF'}} tickFormatter={(value) => `${value/1000000}M`} />
-                                    <Tooltip 
-                                        cursor={{fill: '#F3F4F6'}} 
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                                    />
-                                    <Bar dataKey="income" fill="#2563EB" radius={[4,4,0,0]} maxBarSize={40} />
-                                    <Bar dataKey="expense" fill="#EF4444" radius={[4,4,0,0]} maxBarSize={40} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                        <div ref={barChartRef} className="h-[300px] w-full min-w-0 min-h-[300px]">
+                            {barChartWidth > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData} barGap={8} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9CA3AF'}} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9CA3AF'}} tickFormatter={(value) => `${value/1000000}M`} />
+                                        <Tooltip 
+                                            cursor={{fill: '#F3F4F6'}} 
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                        />
+                                        <Bar dataKey="income" fill="#2563EB" radius={[4,4,0,0]} maxBarSize={40} />
+                                        <Bar dataKey="expense" fill="#EF4444" radius={[4,4,0,0]} maxBarSize={40} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="h-full w-full" />
+                            )}
                         </div>
                     </div>
 
@@ -461,6 +510,93 @@ const Finance = () => {
                                     <tr>
                                         <td colSpan="7" className="px-6 py-10 text-center text-gray-400 text-sm">
                                             Không có giao dịch nào trong tháng này.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-6 border-b border-gray-100">
+                        <h3 className="font-bold text-gray-800 text-lg">Đơn hàng khóa học</h3>
+                        <p className="text-sm text-gray-500 mt-1">Duyệt đơn completed để tự mở quyền học khóa cho học viên.</p>
+                        <div className="mt-3 w-[220px]">
+                            <select
+                                value={orderStatusFilter}
+                                onChange={(e) => setOrderStatusFilter(e.target.value)}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                            >
+                                <option value="all">Tất cả trạng thái</option>
+                                <option value="pending">Pending</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã đơn</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Học viên</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Khóa học</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tổng tiền</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {filteredOrders.map((order) => {
+                                    const firstCourse = order?.items?.[0]?.courseId;
+                                    const isPending = order.status === "pending";
+                                    return (
+                                        <tr key={order._id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{order._id}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-800">{order?.userId?.fullName || order?.userId?.email || "-"}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-800">{firstCourse?.title || "-"}</td>
+                                            <td className="px-6 py-4 text-sm font-semibold text-gray-900">{Number(order.totalAmount || 0).toLocaleString("vi-VN")}đ</td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                    order.status === "completed"
+                                                        ? "bg-green-100 text-green-800"
+                                                        : order.status === "cancelled"
+                                                            ? "bg-red-100 text-red-800"
+                                                            : "bg-yellow-100 text-yellow-800"
+                                                }`}>
+                                                    {order.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                {isPending ? (
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => handleUpdateOrderStatus(order._id, "completed")}
+                                                            disabled={updatingOrderId === order._id}
+                                                            className="px-3 py-1.5 text-xs rounded-lg bg-green-600 text-white disabled:opacity-60"
+                                                        >
+                                                            Duyệt
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleUpdateOrderStatus(order._id, "cancelled")}
+                                                            disabled={updatingOrderId === order._id}
+                                                            className="px-3 py-1.5 text-xs rounded-lg bg-red-600 text-white disabled:opacity-60"
+                                                        >
+                                                            Từ chối
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-gray-400">-</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {filteredOrders.length === 0 && (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-10 text-center text-gray-400 text-sm">
+                                            Không có đơn hàng phù hợp bộ lọc.
                                         </td>
                                     </tr>
                                 )}

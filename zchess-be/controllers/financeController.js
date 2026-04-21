@@ -2,6 +2,7 @@ const Revenue = require("../models/Revenue");
 const Expense = require("../models/Expense");
 const Enrollment = require("../models/Enrollment");
 const Student = require("../models/Student");
+const Order = require("../models/Order");
 const asyncHandler = require("../middleware/asyncHandler");
 
 const getMonthRange = (date = new Date()) => {
@@ -26,7 +27,19 @@ const getStatsByRange = async (start, end) => {
     0,
   );
 
-  const totalIncome = totalRevenueAmount + totalTuition;
+  const completedOrders = await Order.find({
+    status: "completed",
+    $or: [
+      { paidAt: { $gte: start, $lte: end } },
+      { paidAt: null, createdAt: { $gte: start, $lte: end } },
+    ],
+  });
+  const totalCourseRevenue = completedOrders.reduce(
+    (acc, curr) => acc + (curr.totalAmount || 0),
+    0,
+  );
+
+  const totalIncome = totalRevenueAmount + totalTuition + totalCourseRevenue;
 
   const expenseDocs = await Expense.find({
     date: { $gte: start, $lte: end },
@@ -35,7 +48,7 @@ const getStatsByRange = async (start, end) => {
 
   const netProfit = totalIncome - totalExpense;
 
-  return { totalIncome, totalExpense, netProfit };
+  return { totalIncome, totalExpense, netProfit, totalCourseRevenue };
 };
 
 const calculateGrowth = (current, previous) => {
@@ -74,6 +87,10 @@ exports.getFinanceStats = asyncHandler(async (req, res) => {
     currentStats.netProfit,
     prevStats.netProfit,
   );
+  const courseRevenueGrowth = calculateGrowth(
+    currentStats.totalCourseRevenue,
+    prevStats.totalCourseRevenue,
+  );
 
   res.json({
     success: true,
@@ -98,6 +115,13 @@ exports.getFinanceStats = asyncHandler(async (req, res) => {
         change: `${profitGrowth > 0 ? "+" : ""}${profitGrowth}%`,
         sub: "mục tiêu đạt",
         trend: profitGrowth >= 0 ? "up" : "down",
+      },
+      {
+        label: "Doanh thu khóa học",
+        value: currentStats.totalCourseRevenue,
+        change: `${courseRevenueGrowth > 0 ? "+" : ""}${courseRevenueGrowth}%`,
+        sub: "đơn đã duyệt",
+        trend: courseRevenueGrowth >= 0 ? "up" : "down",
       },
     ],
   });
@@ -133,10 +157,18 @@ exports.getFinanceChartData = asyncHandler(async (req, res) => {
         paymentStatus: "paid",
         enrollmentDate: { $gte: start, $lte: end },
       });
+      const orders = await Order.find({
+        status: "completed",
+        $or: [
+          { paidAt: { $gte: start, $lte: end } },
+          { paidAt: null, createdAt: { $gte: start, $lte: end } },
+        ],
+      });
 
       const income =
         revs.reduce((a, b) => a + b.amount, 0) +
-        enrs.reduce((a, b) => a + (b.feeAmount || 0), 0);
+        enrs.reduce((a, b) => a + (b.feeAmount || 0), 0) +
+        orders.reduce((a, b) => a + (b.totalAmount || 0), 0);
       const expense = exps.reduce((a, b) => a + b.amount, 0);
 
       return {
@@ -185,6 +217,7 @@ exports.getTransactions = asyncHandler(async (req, res) => {
   let revenues;
   let expenses;
   let enrollments;
+  let completedOrders;
 
   if (month && year) {
     const targetDate = new Date(Number(year), Number(month) - 1, 1);
@@ -202,12 +235,27 @@ exports.getTransactions = asyncHandler(async (req, res) => {
     })
       .populate("studentId", "fullName")
       .sort({ enrollmentDate: -1 });
+    completedOrders = await Order.find({
+      status: "completed",
+      $or: [
+        { paidAt: { $gte: start, $lte: end } },
+        { paidAt: null, createdAt: { $gte: start, $lte: end } },
+      ],
+    })
+      .populate("userId", "fullName")
+      .populate("items.courseId", "title")
+      .sort({ paidAt: -1, createdAt: -1 });
   } else {
     revenues = await Revenue.find().sort({ date: -1 }).limit(20);
     expenses = await Expense.find().sort({ date: -1 }).limit(20);
     enrollments = await Enrollment.find({ paymentStatus: "paid" })
       .populate("studentId", "fullName")
       .sort({ enrollmentDate: -1 })
+      .limit(20);
+    completedOrders = await Order.find({ status: "completed" })
+      .populate("userId", "fullName")
+      .populate("items.courseId", "title")
+      .sort({ paidAt: -1, createdAt: -1 })
       .limit(20);
   }
 
@@ -241,9 +289,24 @@ exports.getTransactions = asyncHandler(async (req, res) => {
     status: "completed",
   }));
 
-  let all = [...normalizedRevenues, ...normalizedExpenses, ...normalizedEnrollments].sort(
-    (a, b) => new Date(b.date) - new Date(a.date),
-  );
+  const normalizedCourseOrders = completedOrders.map((o) => ({
+    id: `ORD-${String(o._id).slice(-6).toUpperCase()}`,
+    content: `Thu khóa học - ${o.userId?.fullName || "Học viên"}`,
+    sub:
+      o.items?.map((item) => item?.courseId?.title).filter(Boolean).join(", ") ||
+      "Khóa học",
+    type: "income",
+    date: o.paidAt || o.createdAt,
+    amount: o.totalAmount || 0,
+    status: "completed",
+  }));
+
+  let all = [
+    ...normalizedRevenues,
+    ...normalizedExpenses,
+    ...normalizedEnrollments,
+    ...normalizedCourseOrders,
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (!month && !year) {
     all = all.slice(0, 20);
@@ -258,6 +321,7 @@ exports.exportFinanceReport = asyncHandler(async (req, res) => {
   let revenues;
   let expenses;
   let enrollments;
+  let completedOrders;
   let filename = `BaoCaoTaiChinh_${year || "All"}_${month || "Recent"}.csv`;
 
   if (month && year) {
@@ -276,6 +340,16 @@ exports.exportFinanceReport = asyncHandler(async (req, res) => {
     })
       .populate("studentId", "fullName")
       .sort({ enrollmentDate: -1 });
+    completedOrders = await Order.find({
+      status: "completed",
+      $or: [
+        { paidAt: { $gte: start, $lte: end } },
+        { paidAt: null, createdAt: { $gte: start, $lte: end } },
+      ],
+    })
+      .populate("userId", "fullName")
+      .populate("items.courseId", "title")
+      .sort({ paidAt: -1, createdAt: -1 });
   } else {
     const today = new Date();
     const { start, end } = getMonthRange(today);
@@ -285,6 +359,15 @@ exports.exportFinanceReport = asyncHandler(async (req, res) => {
       paymentStatus: "paid",
       enrollmentDate: { $gte: start, $lte: end },
     }).populate("studentId", "fullName");
+    completedOrders = await Order.find({
+      status: "completed",
+      $or: [
+        { paidAt: { $gte: start, $lte: end } },
+        { paidAt: null, createdAt: { $gte: start, $lte: end } },
+      ],
+    })
+      .populate("userId", "fullName")
+      .populate("items.courseId", "title");
     filename = `BaoCaoTaiChinh_Thang${today.getMonth() + 1}_${today.getFullYear()}.csv`;
   }
 
@@ -316,6 +399,17 @@ exports.exportFinanceReport = asyncHandler(async (req, res) => {
       "Thu nhập",
       e.enrollmentDate,
       e.feeAmount,
+      "Hoàn thành",
+    ),
+  );
+  completedOrders.forEach((o) =>
+    addToCsv(
+      `ORD-${String(o._id).slice(-6).toUpperCase()}`,
+      `Thu khóa học - ${o.userId?.fullName || "Học viên"}`,
+      o.items?.map((item) => item?.courseId?.title).filter(Boolean).join(", ") || "Khóa học",
+      "Thu nhập",
+      o.paidAt || o.createdAt,
+      o.totalAmount || 0,
       "Hoàn thành",
     ),
   );

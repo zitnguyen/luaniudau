@@ -18,6 +18,7 @@ const orderSchema = new mongoose.Schema({
     default: "bank_transfer"
   },
   transactionId: { type: String },
+  paidAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
 });
 

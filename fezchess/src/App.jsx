@@ -28,6 +28,9 @@ import ProgressList from "./pages/Admin/Progress/ProgressList";
 import ProgressDetail from "./pages/Admin/Progress/ProgressDetail";
 import PostList from "./pages/Admin/CMS/PostList";
 import PostForm from "./pages/Admin/CMS/PostForm";
+import TestimonialList from "./pages/Admin/CMS/TestimonialList";
+import TestimonialForm from "./pages/Admin/CMS/TestimonialForm";
+import HeroSettingForm from "./pages/Admin/CMS/HeroSettingForm";
 import InquiryList from "./pages/Admin/CRM/InquiryList";
 import AdminCourseList from "./pages/Admin/Courses/AdminCourseList";
 import AdminCourseForm from "./pages/Admin/Courses/AdminCourseForm";
@@ -78,14 +81,16 @@ import LearningPage from "./pages/public/LearningPage";
 import { Toaster } from "sonner";
 import { SystemSettingsProvider } from "./context/SystemSettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { PublicCmsProvider } from "./context/PublicCmsContext";
 
 function App() {
   return (
     <Router>
       <ThemeProvider>
         <SystemSettingsProvider>
-          <Toaster position="top-right" richColors closeButton />
-          <Routes>
+          <PublicCmsProvider>
+            <Toaster position="top-right" richColors closeButton />
+            <Routes>
             {/* Public Routes */}
             <Route element={<PublicLayout />}>
               <Route path="/" element={<HomePage />} />
@@ -425,6 +430,46 @@ function App() {
               }
             />
             <Route
+              path="/cms/testimonials"
+              element={
+                <ProtectedRoute allowedRoles={["Admin"]}>
+                  <MainLayout>
+                    <TestimonialList />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cms/testimonials/new"
+              element={
+                <ProtectedRoute allowedRoles={["Admin"]}>
+                  <MainLayout>
+                    <TestimonialForm />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cms/testimonials/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={["Admin"]}>
+                  <MainLayout>
+                    <TestimonialForm />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cms/hero"
+              element={
+                <ProtectedRoute allowedRoles={["Admin"]}>
+                  <MainLayout>
+                    <HeroSettingForm />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/crm/inquiries"
               element={
                 <ProtectedRoute allowedRoles={["Admin"]}>
@@ -627,7 +672,8 @@ function App() {
               path="*"
               element={<div className="p-20 text-center">Coming Soon</div>}
             />
-          </Routes>
+            </Routes>
+          </PublicCmsProvider>
         </SystemSettingsProvider>
       </ThemeProvider>
     </Router>

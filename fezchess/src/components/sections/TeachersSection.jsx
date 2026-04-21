@@ -3,10 +3,13 @@ import ScrollReveal from "../common/ScrollReveal";
 import TeacherCard from "../cards/TeacherCard";
 // import teacherService from "../../services/teacherService"; // Using relative path if needed or absolute
 import axiosClient from "../../api/axiosClient"; // Direct use for simplicity or use service if preferred
+import { usePublicCms } from "../../context/PublicCmsContext";
 
 const TeachersSection = () => {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { cms } = usePublicCms();
+  const section = cms?.home?.teachers || {};
 
   useEffect(() => {
     const fetchTeachers = async () => {
@@ -29,14 +32,14 @@ const TeachersSection = () => {
         {/* Header */}
         <ScrollReveal className="text-center mb-16">
           <span className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
-            Đội ngũ
+            {section?.badge || "Đội ngũ"}
           </span>
           <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Giáo viên xuất sắc
+            {section?.title || "Giáo viên xuất sắc"}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Đội ngũ giáo viên giàu kinh nghiệm, đam mê và tận tâm với sự phát
-            triển của từng học viên.
+            {section?.description ||
+              "Đội ngũ giáo viên giàu kinh nghiệm, đam mê và tận tâm với sự phát triển của từng học viên."}
           </p>
         </ScrollReveal>
 

@@ -36,6 +36,8 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const adminPayrollRoutes = require("./routes/adminPayrollRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
+const testimonialRoutes = require("./routes/testimonialRoutes");
+const heroSettingRoutes = require("./routes/heroSettingRoutes");
 
 const errorHandler = require("./middleware/errorMiddleware");
 const { apiLimiter } = require("./middleware/securityMiddleware");
@@ -97,6 +99,8 @@ app.use("/api/admin", adminPayrollRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/testimonials", testimonialRoutes);
+app.use("/api/hero-settings", heroSettingRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

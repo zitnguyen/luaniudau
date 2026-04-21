@@ -37,8 +37,16 @@ const refreshLimiter = createLimiter(
 
 const apiLimiter = createLimiter(
   60 * 1000,
-  120,
+  isProd ? 240 : 5000,
   "Too many requests. Please slow down.",
+  {
+    // In local development, avoid blocking normal UI polling/refresh traffic.
+    skip: (req) =>
+      !isProd &&
+      (req.ip === "::1" ||
+        req.ip === "127.0.0.1" ||
+        String(req.headers.origin || "").includes("localhost")),
+  },
 );
 
 module.exports = {

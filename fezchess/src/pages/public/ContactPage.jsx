@@ -2,9 +2,12 @@ import React, { useState } from "react";
 import axiosClient from "../../api/axiosClient";
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle } from "lucide-react";
 import { useSystemSettings } from "../../context/SystemSettingsContext";
+import { usePublicCms } from "../../context/PublicCmsContext";
 
 const ContactPage = () => {
   const { settings } = useSystemSettings();
+  const { cms } = usePublicCms();
+  const page = cms?.contactPage || {};
   const mapLink = "https://maps.app.goo.gl/bbvA86VXqt63hG9a7";
   const mapQueryAddress =
     settings?.address || "1181/26 KDC Lê Văn Lương, Xã Nhà Bè, TP. Hồ Chí Minh";
@@ -45,12 +48,20 @@ const ContactPage = () => {
   return (
     <div className="bg-white">
       {/* Hero Section */}
-      <div className="bg-gray-900 text-white py-20">
+      <div
+        className="text-white py-20"
+        style={{
+          backgroundColor: page?.heroBackground ? undefined : "#111827",
+          backgroundImage: page?.heroBackground ? `url(${page.heroBackground})` : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold mb-4">Liên Hệ Với Chúng Tôi</h1>
+          <h1 className="text-4xl font-bold mb-4">{page?.title || "Liên Hệ Với Chúng Tôi"}</h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Chúng tôi luôn sẵn sàng lắng nghe và giải đáp mọi thắc mắc của bạn
-            về các khóa học cờ vua.
+            {page?.description ||
+              "Chúng tôi luôn sẵn sàng lắng nghe và giải đáp mọi thắc mắc của bạn về các khóa học cờ vua."}
           </p>
         </div>
       </div>

@@ -5,11 +5,24 @@ const settingsController = require("../controllers/settingsController");
 const router = express.Router();
 
 router.get("/", settingsController.getSettings);
+router.get("/public-cms/public", settingsController.getPublicCms);
+router.get(
+  "/public-cms",
+  protect,
+  authorize("Admin"),
+  settingsController.getAdminPublicCms,
+);
 router.patch(
   "/",
   protect,
   authorize("Admin"),
   settingsController.updateSettings,
+);
+router.patch(
+  "/public-cms",
+  protect,
+  authorize("Admin"),
+  settingsController.updatePublicCms,
 );
 
 module.exports = router;

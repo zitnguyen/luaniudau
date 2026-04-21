@@ -49,33 +49,33 @@
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 214 32% 91%;
+    --background: 0 0% 6%;
+    --foreground: 0 0% 100%;
 
-    --card: 215 28% 17%;
-    --card-foreground: 214 32% 91%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 215 28% 17%;
-    --popover-foreground: 214 32% 91%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 25% 22%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 215 25% 22%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 90%;
 
-    --accent: 215 25% 22%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 0 0% 10%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 215 25% 27%;
-    --input: 215 25% 27%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 0 0% 80%;
   }
 }
 
@@ -154,4 +154,99 @@ body * {
 .dark .shadow-lg,
 .dark .shadow-xl {
   box-shadow: 0 8px 24px rgba(2, 6, 23, 0.45) !important;
+}
+
+/* Force stronger global dark mode visual rules */
+.dark,
+.dark body,
+.dark #root {
+  background-color: #0a0a0a !important;
+  color: #ffffff !important;
+}
+
+/* Text defaults in dark mode without overriding button palettes */
+.dark p,
+.dark span,
+.dark label,
+.dark small,
+.dark strong,
+.dark em,
+.dark li,
+.dark dt,
+.dark dd,
+.dark th,
+.dark td,
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark a:not([class*="bg-"]):not([class*="btn"]) {
+  color: #ffffff !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #111111 !important;
+  color: #ffffff !important;
+  border-color: #2a2a2a !important;
+}
+
+/* Dark mode compatibility layer for common utility classes */
+.dark .bg-white\/95,
+.dark .bg-white\/90,
+.dark .bg-white\/80,
+.dark .bg-white\/70,
+.dark .bg-white {
+  background-color: #111827 !important;
+}
+
+.dark .bg-gray-900,
+.dark .bg-gray-800,
+.dark .bg-gray-700 {
+  background-color: #0f172a !important;
+}
+
+.dark .text-black,
+.dark .text-gray-950,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-slate-900,
+.dark .text-slate-800 {
+  color: #ffffff !important;
+}
+
+.dark .border-white,
+.dark .border-gray-50,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155 !important;
+}
+
+.dark .from-white,
+.dark .from-gray-50,
+.dark .from-gray-100 {
+  --tw-gradient-from: #0f172a var(--tw-gradient-from-position) !important;
+}
+
+.dark .to-white,
+.dark .to-gray-50,
+.dark .to-gray-100 {
+  --tw-gradient-to: #111827 var(--tw-gradient-to-position) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #9ca3af !important;
 }

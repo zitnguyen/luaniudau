@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const Course = require("../models/Course");
+const CourseAccess = require("../models/CourseAccess");
 const asyncHandler = require("../middleware/asyncHandler");
 
 function assertOrderAccess(order, user) {
@@ -10,6 +11,7 @@ function assertOrderAccess(order, user) {
 
 exports.createOrder = asyncHandler(async (req, res) => {
   const { items, paymentMethod } = req.body;
+  const userId = req.user?._id || req.body.userId;
 
   if (!items || items.length === 0) {
     return res.status(400).json({ message: "No items in order" });
@@ -19,6 +21,15 @@ exports.createOrder = asyncHandler(async (req, res) => {
   const orderItems = [];
 
   for (const item of items) {
+    const existingPendingOrder = await Order.findOne({
+      userId,
+      status: "pending",
+      "items.courseId": item.courseId,
+    });
+    if (existingPendingOrder) {
+      return res.status(200).json(existingPendingOrder);
+    }
+
     const course = await Course.findById(item.courseId);
     if (!course) {
       return res
@@ -34,7 +45,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
   }
 
   const order = new Order({
-    userId: req.user?._id || req.body.userId,
+    userId,
     items: orderItems,
     totalAmount,
     paymentMethod,
@@ -96,9 +107,42 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
+  const isAdmin = String(req.user?.role || "").toLowerCase() === "admin";
+  if (status !== undefined && !isAdmin) {
+    return res
+      .status(403)
+      .json({ message: "Chỉ Admin mới có quyền duyệt trạng thái đơn hàng." });
+  }
+
   order.status = status || order.status;
   order.transactionId = transactionId || order.transactionId;
+  if (status === "completed") {
+    order.paidAt = new Date();
+  } else if (status && status !== "completed") {
+    order.paidAt = null;
+  }
 
   const updatedOrder = await order.save();
+
+  if (updatedOrder.status === "completed") {
+    const accessRows = (updatedOrder.items || [])
+      .filter((item) => item?.courseId)
+      .map((item) => ({
+        courseId: item.courseId,
+        userId: updatedOrder.userId,
+        grantedBy: req.user?._id,
+      }));
+    if (accessRows.length > 0) {
+      await CourseAccess.bulkWrite(
+        accessRows.map((row) => ({
+          updateOne: {
+            filter: { courseId: row.courseId, userId: row.userId },
+            update: { $setOnInsert: row },
+            upsert: true,
+          },
+        })),
+      );
+    }
+  }
   res.json(updatedOrder);
 });

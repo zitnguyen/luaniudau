@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, User, LogOut, MonitorPlay, TrendingUp, Bell } from 'lucide-react';
+import { Home, Calendar, LogOut, Bell } from 'lucide-react';
 import authService from '../../../services/authService';
 
 const ParentSidebar = () => {
@@ -16,28 +16,23 @@ const ParentSidebar = () => {
     };
 
     return (
-        <div style={{ width: '250px', background: 'white', borderRight: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0 }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid #E5E7EB' }}>
-               <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#2563EB', margin: 0 }}>ZChess Parent</h2>
+        <div className="w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 flex flex-col h-screen sticky top-0">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+               <h2 className="text-xl font-bold text-primary m-0">ZChess Parent</h2>
             </div>
             
-            <nav style={{ flex: 1, padding: '12px' }}>
+            <nav className="flex-1 p-3">
                 {navItems.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}
-                        style={({ isActive }) => ({
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
-                            borderRadius: '8px',
-                            color: isActive ? '#2563EB' : '#4B5563',
-                            background: isActive ? '#EFF6FF' : 'transparent',
-                            textDecoration: 'none',
-                            marginBottom: '4px',
-                            fontWeight: isActive ? 500 : 400
-                        })}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-4 py-3 rounded-lg no-underline mb-1 ${
+                            isActive
+                              ? "bg-blue-50 dark:bg-slate-800 text-primary font-medium"
+                              : "text-gray-600 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
+                          }`
+                        }
                     >
                         {item.icon}
                         <span>{item.label}</span>
@@ -45,16 +40,10 @@ const ParentSidebar = () => {
                 ))}
             </nav>
 
-            <div style={{ padding: '16px', borderTop: '1px solid #E5E7EB' }}>
+            <div className="p-4 border-t border-gray-200 dark:border-slate-700">
                 <button 
                     onClick={handleLogout}
-                    style={{ 
-                        display: 'flex', alignItems: 'center', gap: '12px', 
-                        width: '100%', padding: '12px 16px', 
-                        border: 'none', background: 'transparent', 
-                        color: '#DC2626', cursor: 'pointer', borderRadius: '8px',
-                        textAlign: 'left'
-                    }}
+                    className="flex items-center gap-3 w-full px-4 py-3 border-0 bg-transparent text-red-600 cursor-pointer rounded-lg text-left hover:bg-red-50 dark:hover:bg-red-900/30"
                 >
                     <LogOut size={20} />
                     <span>Đăng xuất</span>

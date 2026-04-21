@@ -7,10 +7,9 @@ const authService = {
     // Endpoint: /api/auth/signin
     const response = await axiosClient.post('/auth/signin', credentials);
     if (response) {
-      const { accessToken, ...safeResponse } = response || {};
       const normalized = {
-        ...safeResponse,
-        _id: safeResponse._id || safeResponse.userId,
+        ...(response || {}),
+        _id: response?._id || response?.userId,
       };
       localStorage.setItem('user', JSON.stringify(normalized));
       return normalized;

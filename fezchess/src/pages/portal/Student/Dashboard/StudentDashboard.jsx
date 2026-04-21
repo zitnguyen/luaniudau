@@ -17,6 +17,8 @@ const StudentDashboard = () => {
     });
     const [upcomingClasses, setUpcomingClasses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const eloChartRef = React.useRef(null);
+    const [eloChartWidth, setEloChartWidth] = useState(0);
 
     // Mock Data for specific mock charts
     const eloData = [
@@ -79,6 +81,20 @@ const StudentDashboard = () => {
             }
         };
         fetchData();
+    }, []);
+
+    useEffect(() => {
+        const measureChart = () => {
+            const width = eloChartRef.current?.clientWidth || 0;
+            setEloChartWidth(width);
+        };
+        measureChart();
+        window.addEventListener("resize", measureChart);
+        const timer = window.setTimeout(measureChart, 0);
+        return () => {
+            window.removeEventListener("resize", measureChart);
+            window.clearTimeout(timer);
+        };
     }, []);
 
     if (loading) return <div className="page-container">Đang tải bảng điều khiển...</div>;
@@ -158,18 +174,20 @@ const StudentDashboard = () => {
                                 6 tháng qua <ChevronDown size={14} />
                             </div>
                         </div>
-                        <div style={{ height: '300px', width: '100%' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={eloData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} hide={true} />
-                                    <Tooltip 
-                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                                    />
-                                    <Line type="monotone" dataKey="elo" stroke="#2563EB" strokeWidth={3} dot={{ r: 4, fill: 'white', strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
+                        <div ref={eloChartRef} style={{ height: '300px', width: '100%', minWidth: 0, minHeight: '300px' }}>
+                            {eloChartWidth > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={eloData}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} hide={true} />
+                                        <Tooltip 
+                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                        />
+                                        <Line type="monotone" dataKey="elo" stroke="#2563EB" strokeWidth={3} dot={{ r: 4, fill: 'white', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            ) : null}
                         </div>
                     </div>
 

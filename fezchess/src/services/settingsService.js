@@ -24,6 +24,15 @@ const settingsService = {
     const payload = normalizeResponseData(response);
     return payload?.url || payload?.data?.url || "";
   },
+  uploadPaymentQr: async (file) => {
+    const formData = new FormData();
+    formData.append("qr", file);
+    const response = await axiosClient.post("/upload/payment-qr", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    const payload = normalizeResponseData(response);
+    return payload?.url || payload?.data?.url || "";
+  },
 };
 
 export default settingsService;

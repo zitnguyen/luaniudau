@@ -1,3 +1,4 @@
+import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -6,9 +7,37 @@ import {
   MapPinIcon,
 } from "@heroicons/react/24/outline";
 import { useSystemSettings } from "../../context/SystemSettingsContext";
+import { toast } from "sonner";
+import leadService from "../../services/leadService";
 
 const Footer = () => {
   const { settings } = useSystemSettings();
+  const [phone, setPhone] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    const normalized = String(phone || "").trim();
+    const phoneRegex = /^0\d{9,10}$/;
+    if (!phoneRegex.test(normalized)) {
+      toast.error("Số điện thoại không hợp lệ");
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await leadService.create({
+        name: "Newsletter subscriber",
+        phone: normalized,
+        message: "Đăng ký nhận tin từ footer",
+      });
+      toast.success("Đăng ký nhận tin thành công");
+      setPhone("");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Đăng ký thất bại");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <footer className="bg-secondary text-secondary-foreground pt-16 pb-8">
@@ -102,19 +131,23 @@ const Footer = () => {
             <p className="text-muted-foreground mb-4">
               Nhận thông tin khóa học mới và ưu đãi đặc biệt
             </p>
-            <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-3" onSubmit={handleSubscribe}>
               <input
-                type="email"
-                placeholder="Email của bạn"
+                type="tel"
+                placeholder="Nhập số điện thoại"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary/50"
+                disabled={submitting}
               />
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                className="bg-primary text-primary-foreground w-full py-2 rounded-lg font-medium"
+                className="bg-primary text-primary-foreground w-full py-2 rounded-lg font-medium disabled:opacity-70"
+                disabled={submitting}
               >
-                Đăng ký
+                {submitting ? "Đang đăng ký..." : "Đăng ký"}
               </motion.button>
             </form>
           </div>

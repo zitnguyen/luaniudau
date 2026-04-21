@@ -13,11 +13,15 @@ const NotificationListPage = ({ basePath = "/notifications" }) => {
       try {
         setLoading(true);
         setError("");
-        const res = await notificationService.getMine();
+        const res = await notificationService.getMine({ force: true });
         setItems(Array.isArray(res?.items) ? res.items : []);
         setUnreadCount(Number(res?.unreadCount || 0));
       } catch (e) {
-        setError("Không thể tải notification.");
+        setError(
+          e?.response?.status === 429
+            ? "Hệ thống đang giới hạn tần suất tải, vui lòng thử lại sau vài giây."
+            : "Không thể tải notification.",
+        );
       } finally {
         setLoading(false);
       }

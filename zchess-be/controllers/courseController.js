@@ -15,7 +15,7 @@ exports.getAllCourses = asyncHandler(async (req, res) => {
 });
 
 exports.getCourseBySlug = asyncHandler(async (req, res) => {
-  const payload = await courseService.getCourseBySlug(req.params.slug);
+  const payload = await courseService.getCourseBySlug(req.params.slug, req.user);
   res.json(payload);
 });
 
@@ -37,4 +37,19 @@ exports.deleteCourse = asyncHandler(async (req, res) => {
 exports.getMyCourses = asyncHandler(async (req, res) => {
   const courses = await courseService.getMyCourses(req.user._id);
   res.json({ courses });
+});
+
+exports.getCourseAccess = asyncHandler(async (req, res) => {
+  const users = await courseService.getCourseAccess(req.params.id);
+  res.json({ users });
+});
+
+exports.setCourseAccess = asyncHandler(async (req, res) => {
+  const userIds = Array.isArray(req.body?.userIds) ? req.body.userIds : [];
+  const savedUserIds = await courseService.setCourseAccess(
+    req.params.id,
+    userIds,
+    req.user._id,
+  );
+  res.json({ userIds: savedUserIds });
 });

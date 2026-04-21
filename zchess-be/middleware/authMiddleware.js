@@ -40,12 +40,36 @@ exports.protect = async (req, res, next) => {
   }
 };
 
+exports.optionalProtect = async (req, _res, next) => {
+  let token = null;
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+    token = req.headers.authorization.split(" ")[1];
+  } else if (req.cookies?.accessToken) {
+    token = req.cookies.accessToken;
+  }
+  if (!token) return next();
+
+  try {
+    if (!process.env.JWT_SECRET) return next();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+    if (user) req.user = user;
+  } catch {
+    // Optional auth should never block public endpoints.
+  }
+  return next();
+};
+
 exports.authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: "User not authenticated" });
     }
-    if (!roles.includes(req.user.role)) {
+    const normalizedAllowedRoles = roles.map((role) =>
+      String(role || "").trim().toLowerCase(),
+    );
+    const currentRole = String(req.user.role || "").trim().toLowerCase();
+    if (!normalizedAllowedRoles.includes(currentRole)) {
       return res.status(403).json({
         message: `User role ${req.user.role} is not authorized to access this route`,
       });

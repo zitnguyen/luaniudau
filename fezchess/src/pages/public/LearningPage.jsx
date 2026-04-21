@@ -18,6 +18,10 @@ const LearningPage = () => {
                 setLesson(res);
             } catch (error) {
                 console.error("Failed to fetch lesson", error);
+                if (error?.response?.status === 403) {
+                    alert(error?.response?.data?.message || "Bạn không có quyền xem bài học này.");
+                    navigate(`/courses/${courseSlug}`);
+                }
             } finally {
                 setLoading(false);
             }

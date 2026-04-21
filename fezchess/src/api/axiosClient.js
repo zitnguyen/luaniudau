@@ -9,11 +9,13 @@ const axiosClient = axios.create({
     "Content-Type": "application/json",
   },
   withCredentials: true,
+  timeout: 15000,
 });
 
 const refreshClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  timeout: 10000,
 });
 
 let refreshPromise = null;
@@ -43,6 +45,18 @@ const refreshAccessToken = async () => {
       .then((res) => {
         const newAccessToken = res?.data?.accessToken;
         if (!newAccessToken) throw new Error("No access token returned from refresh endpoint");
+        const userStr = localStorage.getItem("user");
+        if (userStr && userStr !== "undefined") {
+          try {
+            const user = JSON.parse(userStr);
+            localStorage.setItem(
+              "user",
+              JSON.stringify({ ...user, accessToken: newAccessToken }),
+            );
+          } catch {
+            // Keep silent: request flow can still continue with returned token.
+          }
+        }
         return newAccessToken;
       })
       .finally(() => {
