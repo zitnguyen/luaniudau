@@ -5,7 +5,7 @@ import { useSystemSettings } from "../../context/SystemSettingsContext";
 
 const ContactPage = () => {
   const { settings } = useSystemSettings();
-  const mapLink = "https://maps.app.goo.gl/QG3Rm7K3hpk28azF7";
+  const mapLink = "https://maps.app.goo.gl/bbvA86VXqt63hG9a7";
   const mapQueryAddress =
     settings?.address || "1181/26 KDC Lê Văn Lương, Xã Nhà Bè, TP. Hồ Chí Minh";
   const mapEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(
@@ -117,6 +117,15 @@ const ContactPage = () => {
 
             {/* Map placeholder */}
             <div className="mt-10 rounded-xl overflow-hidden border border-gray-200">
+              <div className="relative">
+                <a
+                  href={mapLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 text-primary hover:text-primary/90 hover:bg-white font-semibold text-sm transition-colors"
+                >
+                  Open in Maps
+                </a>
               <iframe
                 title="Google Maps"
                 src={mapEmbedSrc}
@@ -125,14 +134,15 @@ const ContactPage = () => {
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />
+              </div>
               <div className="bg-gray-50 px-4 py-2 border-t border-gray-200 text-sm">
                 <a
                   href={mapLink}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline font-medium"
                 >
-                  Mở Google Maps
+                  Open in Maps
                 </a>
               </div>
             </div>

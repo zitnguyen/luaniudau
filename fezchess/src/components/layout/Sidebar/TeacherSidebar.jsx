@@ -11,7 +11,7 @@ import {
   Bell,
 } from "lucide-react";
 import authService from "../../../services/authService";
-import { getRoleLabel } from "../../../constants/roleLabel";
+import SidebarHeader from "./SidebarHeader";
 
 const TeacherSidebar = ({ isOpen, onClose }) => {
   const user = authService.getCurrentUser();
@@ -34,7 +34,7 @@ const TeacherSidebar = ({ isOpen, onClose }) => {
   ];
 
   const linkClass = ({ isActive }) =>
-    `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+    `group flex items-center gap-3 px-3 py-2.5 min-h-12 rounded-xl text-[15px] md:text-sm font-medium transition-all duration-200 ${
       isActive
         ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -57,27 +57,13 @@ const TeacherSidebar = ({ isOpen, onClose }) => {
       ></div>
 
       <div
-        className={`fixed top-0 left-0 bottom-0 w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 md:translate-x-0 ${
+        className={`fixed top-0 left-0 bottom-0 h-screen w-[82vw] max-w-72 md:w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 md:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } flex flex-col`}
       >
-        <div className="h-16 flex items-center px-6 border-b border-gray-100 mb-2">
-          <div className="text-2xl mr-3">♟️</div>
-          <div>
-            <div className="font-bold text-gray-900 leading-tight">Z CHESS</div>
-            <div className="text-xs text-gray-500 font-medium">
-              {user?.fullName || getRoleLabel(user?.role) || "User"}
-            </div>
-          </div>
-          <button
-            onClick={handleClose}
-            className="ml-auto md:hidden p-1 text-gray-500 hover:bg-gray-100 rounded"
-          >
-            ✕
-          </button>
-        </div>
+        <SidebarHeader user={user} onClose={handleClose} className="mb-2" />
 
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto py-3 px-2 md:px-3 space-y-1 pb-6">
           {items.map((item) => (
             <NavLink
               key={item.to}
@@ -87,8 +73,10 @@ const TeacherSidebar = ({ isOpen, onClose }) => {
             >
               {({ isActive }) => (
                 <>
-                  <item.icon size={20} className={iconClass(isActive)} />
-                  <span>{item.label}</span>
+                  <span className="w-5 h-5 shrink-0 flex items-center justify-center">
+                    <item.icon size={20} className={iconClass(isActive)} />
+                  </span>
+                  <span className="truncate leading-none">{item.label}</span>
                 </>
               )}
             </NavLink>
