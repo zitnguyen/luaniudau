@@ -35,7 +35,7 @@ import HeroSettingForm from "./pages/Admin/CMS/HeroSettingForm";
 import InquiryList from "./pages/Admin/CRM/InquiryList";
 import AdminCourseList from "./pages/Admin/Courses/AdminCourseList";
 import AdminCourseForm from "./pages/Admin/Courses/AdminCourseForm";
-import AdminNotificationCreate from "./pages/Admin/Notifications/AdminNotificationCreate";
+
 import AdminPayroll from "./pages/Admin/Payroll/AdminPayroll";
 import SystemSettings from "./pages/Admin/Settings/SystemSettings";
 
@@ -52,6 +52,8 @@ import PublicLayout from "./components/layout/PublicLayout"; // Using the compon
 // Portal Pages
 import ParentDashboard from "./pages/portal/Parent/ParentDashboard";
 import ParentSchedule from "./pages/portal/Parent/ParentSchedule";
+import ParentProgressView from "./pages/portal/Parent/ParentProgressView";
+import ParentMyCourses from "./pages/portal/Parent/ParentMyCourses";
 
 import TeacherDashboard from "./pages/portal/Teacher/Dashboard/TeacherDashboard";
 import TeachingLogList from "./pages/portal/Teacher/Payroll/TeachingLogList";
@@ -570,16 +572,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/admin/notifications/new"
-              element={
-                <ProtectedRoute allowedRoles={["Admin"]}>
-                  <MainLayout>
-                    <AdminNotificationCreate />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+
             <Route
               path="/admin/settings"
               element={
@@ -664,6 +657,8 @@ function App() {
                     <Routes>
                       <Route path="dashboard" element={<ParentDashboard />} />
                       <Route path="schedule" element={<ParentSchedule />} />
+                      <Route path="courses" element={<ParentMyCourses />} />
+                      <Route path="progress" element={<ParentProgressView />} />
                       <Route path="chat" element={<ChatPage />} />
                       <Route
                         path="notifications"

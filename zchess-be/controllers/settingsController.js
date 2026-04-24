@@ -15,6 +15,10 @@ const DEFAULT_SETTINGS = {
   bankAccountName: "",
   paymentQrUrl: "",
   paymentTransferPrefix: "KHOAHOC",
+  announcement_enabled: false,
+  announcement_text: "",
+  announcement_bg_color: "#ff0000",
+  announcement_text_color: "#ffffff",
   publicCms: {
     theme: {
       fontFamily: "inherit",
@@ -56,11 +60,19 @@ const sanitizePatch = (body = {}) => {
     "bankAccountName",
     "paymentQrUrl",
     "paymentTransferPrefix",
+    "announcement_enabled",
+    "announcement_text",
+    "announcement_bg_color",
+    "announcement_text_color",
   ];
 
   fields.forEach((field) => {
     if (body[field] !== undefined) {
-      patch[field] = String(body[field] ?? "").trim();
+      if (field === "announcement_enabled") {
+        patch[field] = Boolean(body[field]);
+      } else {
+        patch[field] = String(body[field] ?? "").trim();
+      }
     }
   });
   if (body.publicCms && typeof body.publicCms === "object") {

@@ -8,6 +8,7 @@ import ThemeToggle from "../common/ThemeToggle";
 import authService from "../../services/authService";
 import { getDashboardPathByRole } from "../../constants/roleRoutes";
 import notificationService from "../../services/notificationService";
+import AnnouncementBar from "../common/AnnouncementBar";
 
 const navLinks = [
   { name: "Trang chủ", path: "/" },
@@ -31,7 +32,7 @@ const Header = () => {
 
   const getNotificationPath = () => {
     const role = String(currentUser?.role || "").toLowerCase();
-    if (role === "admin") return "/admin/notifications/new";
+    if (role === "admin") return "/admin/notifications";
     if (role === "teacher") return "/teacher/notifications";
     if (role === "parent") return "/parent/notifications";
     if (role === "student") return "/student/notifications";
@@ -55,10 +56,17 @@ const Header = () => {
       }
     };
     fetchUnread();
+    const unsubscribeRealtime = notificationService.subscribeRealtime(() => {
+      fetchUnread();
+      if (showNotifications) {
+        fetchNotifications();
+      }
+    });
     return () => {
       mounted = false;
+      unsubscribeRealtime();
     };
-  }, [currentUser?._id, currentUser?.userId]);
+  }, [currentUser?._id, currentUser?.userId, showNotifications]);
 
   useEffect(() => {
     if (!showNotifications) return undefined;
@@ -110,33 +118,33 @@ const Header = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
-      <div className="container mx-auto px-4">
-        <nav className="flex items-center justify-between h-20">
+    <header className="sticky top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-border flex flex-col">
+      <div className="container mx-auto px-4 sm:px-6">
+        <nav className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <button onClick={handleGoHome} className="flex items-center gap-3">
+          <button onClick={handleGoHome} className="flex items-center gap-2 md:gap-3">
             {settings?.logoUrl ? (
               <motion.img
                 whileHover={{ rotate: 8 }}
                 transition={{ duration: 0.3 }}
                 src={settings.logoUrl}
                 alt="Center logo"
-                className="w-12 h-12 rounded-xl object-cover border border-border"
+                className="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-xl object-cover border border-border"
               />
             ) : (
               <motion.div
                 whileHover={{ rotate: 15 }}
                 transition={{ duration: 0.3 }}
-                className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center"
+                className="w-8 h-8 md:w-12 md:h-12 bg-secondary rounded-lg md:rounded-xl flex items-center justify-center"
               >
-                <span className="text-2xl">♔</span>
+                <span className="text-xl md:text-2xl">♔</span>
               </motion.div>
             )}
             <div className="text-left">
-              <h1 className="font-display text-xl font-bold">
+              <h1 className="font-display text-lg md:text-xl font-bold">
                 {settings?.centerName || "Z Chess"}
               </h1>
-              <p className="text-xs text-muted-foreground">Trung tâm Cờ Vua</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground hidden sm:block">Trung tâm Cờ Vua</p>
             </div>
           </button>
 
@@ -355,6 +363,7 @@ const Header = () => {
           )}
         </AnimatePresence>
       </div>
+      <AnnouncementBar />
     </header>
   );
 };

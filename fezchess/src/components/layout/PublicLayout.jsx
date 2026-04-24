@@ -14,7 +14,7 @@ const PublicLayout = () => {
     return (
         <div className="min-h-screen flex flex-col">
             <Header />
-            <main className="flex-grow pt-20"> {/* pt-20 to account for fixed header height */}
+            <main className="flex-grow">
                 <PageTransition>
                     <Outlet />
                 </PageTransition>

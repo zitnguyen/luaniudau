@@ -7,6 +7,12 @@ const { protect, authorize, optionalProtect } = require("../middleware/authMiddl
 router.get("/", courseController.getAllCourses);
 router.get("/user/my-courses", protect, courseController.getMyCourses);
 router.get(
+  "/parent/my-courses",
+  protect,
+  authorize("Parent"),
+  courseController.getParentChildrenCourses,
+);
+router.get(
   "/id/:id",
   protect,
   authorize("Admin", "Teacher"),

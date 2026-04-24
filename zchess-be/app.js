@@ -54,6 +54,7 @@ app.use(
       "http://localhost:5173",
       "http://localhost:5174",
       "http://localhost:3000",
+      "http://192.168.1.31:5173",
       process.env.CLIENT_URL || "http://localhost:3000",
     ],
     credentials: true,

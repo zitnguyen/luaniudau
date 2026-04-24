@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, LogOut, Bell, MessageCircle } from 'lucide-react';
+import { Home, Calendar, LogOut, Bell, MessageCircle, PlayCircle } from 'lucide-react';
 import authService from '../../../services/authService';
 import chatService from '../../../services/chatService';
 
@@ -27,6 +27,7 @@ const ParentSidebar = () => {
     const navItems = [
         { path: '/parent/dashboard', label: 'Tổng quan', icon: <Home size={20} /> },
         { path: '/parent/schedule', label: 'Lịch học con', icon: <Calendar size={20} /> },
+        { path: '/parent/courses', label: 'Khóa học của tôi', icon: <PlayCircle size={20} /> },
         { path: '/parent/notifications', label: 'Thông báo', icon: <Bell size={20} /> },
         { path: '/parent/chat', label: 'Chat với Admin', icon: <MessageCircle size={20} /> },
     ];

@@ -5,9 +5,15 @@ import { toast } from "sonner";
 import studentService from "../../../services/studentService";
 import parentService from "../../../services/parentService";
 import authService from "../../../services/authService";
-import { STUDENT_SKILL_LEVELS, getSkillLevelLabel } from "../../../utils/studentLevel";
+import {
+  STUDENT_SKILL_LEVELS,
+  getSkillLevelLabel,
+} from "../../../utils/studentLevel";
 
-const normalizeRole = (role) => String(role || "").trim().toLowerCase();
+const normalizeRole = (role) =>
+  String(role || "")
+    .trim()
+    .toLowerCase();
 const isAdminUser = (user) => normalizeRole(user?.role) === "admin";
 
 const StudentForm = () => {
@@ -25,9 +31,6 @@ const StudentForm = () => {
     completedLessons: 0,
   });
   const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
     fullName: "",
     dateOfBirth: "",
     enrollmentDate: "",
@@ -42,7 +45,8 @@ const StudentForm = () => {
   });
 
   const selectedParent = useMemo(
-    () => parents.find((item) => String(item._id) === String(formData.parentId)),
+    () =>
+      parents.find((item) => String(item._id) === String(formData.parentId)),
     [parents, formData.parentId],
   );
 
@@ -59,27 +63,38 @@ const StudentForm = () => {
           setLoading(true);
           const student = await studentService.getById(id);
           if (!mounted) return;
-          const totalLessons = Number(student?.totalLessons ?? student?.totalSessions ?? 0);
+          const totalLessons = Number(
+            student?.totalLessons ?? student?.totalSessions ?? 0,
+          );
           const completedLessons = Number(student?.completedLessons ?? 0);
           setMeta({ totalLessons, completedLessons });
           setFormData((prev) => ({
             ...prev,
             fullName: student?.fullName || "",
-            dateOfBirth: student?.dateOfBirth ? String(student.dateOfBirth).slice(0, 10) : "",
+            dateOfBirth: student?.dateOfBirth
+              ? String(student.dateOfBirth).slice(0, 10)
+              : "",
             enrollmentDate: student?.enrollmentDate
               ? String(student.enrollmentDate).slice(0, 10)
               : "",
             phone: student?.parentId?.phone || "",
             skillLevel: student?.skillLevel || "",
             address: student?.address || "",
-            totalSessions: Number(student?.totalSessions ?? student?.totalLessons ?? 0),
+            totalSessions: Number(
+              student?.totalSessions ?? student?.totalLessons ?? 0,
+            ),
             completedLessons,
             parentId: student?.parentId?._id || "",
-            status: totalLessons > 0 && completedLessons >= totalLessons ? "completed" : "active",
+            status:
+              totalLessons > 0 && completedLessons >= totalLessons
+                ? "completed"
+                : "active",
           }));
         }
       } catch (error) {
-        toast.error(error?.response?.data?.message || "Không tải được dữ liệu học viên");
+        toast.error(
+          error?.response?.data?.message || "Không tải được dữ liệu học viên",
+        );
       } finally {
         if (mounted) setLoading(false);
       }
@@ -119,9 +134,6 @@ const StudentForm = () => {
       completedLessons: Number(formData.completedLessons || 0),
       parentId: formData.parentId,
       parentPhone: selectedParent?.phone || formData.phone || undefined,
-      username: formData.username || undefined,
-      email: formData.email || undefined,
-      password: formData.password || undefined,
       gender: formData.gender || undefined,
       phone: formData.phone || undefined,
     };
@@ -132,7 +144,8 @@ const StudentForm = () => {
     }
 
     if (isEditMode && formData.status === "completed") {
-      payload.completedLessons = payload.totalLessons || meta.totalLessons || meta.completedLessons || 1;
+      payload.completedLessons =
+        payload.totalLessons || meta.totalLessons || meta.completedLessons || 1;
     }
 
     try {
@@ -188,7 +201,9 @@ const StudentForm = () => {
             {isEditMode ? "Cập nhật học viên" : "Tạo học viên mới"}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {isEditMode ? "Chỉnh sửa thông tin học viên hiện có." : "Nhập thông tin để tạo hồ sơ học viên."}
+            {isEditMode
+              ? "Chỉnh sửa thông tin học viên hiện có."
+              : "Nhập thông tin để tạo hồ sơ học viên."}
           </p>
         </div>
         <button
@@ -201,47 +216,15 @@ const StudentForm = () => {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm space-y-6">
-        {!isEditMode && (
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-              <input
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                placeholder="student_username"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                placeholder="student@example.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                placeholder="******"
-              />
-            </div>
-          </section>
-        )}
-
+      <form
+        onSubmit={handleSubmit}
+        className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm space-y-6"
+      >
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Họ và tên *
+            </label>
             <input
               name="fullName"
               value={formData.fullName}
@@ -251,7 +234,9 @@ const StudentForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ngày sinh
+            </label>
             <input
               type="date"
               name="dateOfBirth"
@@ -261,7 +246,9 @@ const StudentForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ngày nhập học</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ngày nhập học
+            </label>
             <input
               type="date"
               name="enrollmentDate"
@@ -271,7 +258,9 @@ const StudentForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Level</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Level
+            </label>
             <select
               name="skillLevel"
               value={formData.skillLevel}
@@ -287,7 +276,9 @@ const StudentForm = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Giới tính
+            </label>
             <select
               name="gender"
               value={formData.gender}
@@ -301,7 +292,9 @@ const StudentForm = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">SĐT</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              SĐT
+            </label>
             <input
               name="phone"
               value={formData.phone}
@@ -311,7 +304,9 @@ const StudentForm = () => {
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Địa chỉ
+            </label>
             <input
               name="address"
               value={formData.address}
@@ -321,7 +316,9 @@ const StudentForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Parent *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Parent *
+            </label>
             <select
               name="parentId"
               value={formData.parentId}
@@ -338,7 +335,9 @@ const StudentForm = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tổng số buổi</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tổng số buổi
+            </label>
             <input
               type="number"
               min={0}
@@ -349,7 +348,9 @@ const StudentForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Số buổi đã học</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Số buổi đã học
+            </label>
             <input
               type="number"
               min={0}
@@ -362,7 +363,9 @@ const StudentForm = () => {
 
           {isEditMode && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Trạng thái
+              </label>
               <select
                 name="status"
                 value={formData.status}

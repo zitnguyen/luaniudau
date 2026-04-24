@@ -1,10 +1,17 @@
 import axiosClient from "../api/axiosClient";
+import authService from "./authService";
+import { getRealtimeSocket } from "./realtimeSocket";
 
 let mineCache = null;
 let mineCacheAt = 0;
 let mineInFlightPromise = null;
 const MINE_CACHE_TTL_MS = 5000;
 const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const clearMineCache = () => {
+  mineCache = null;
+  mineCacheAt = 0;
+};
 
 const notificationService = {
   create: (payload) => axiosClient.post("/notifications", payload),
@@ -51,6 +58,24 @@ const notificationService = {
   getById: (id) => axiosClient.get(`/notifications/${id}`),
   markRead: (id, isRead = true) =>
     axiosClient.patch(`/notifications/${id}/read`, { isRead }),
+  subscribeRealtime: (handler) => {
+    const accessToken = authService.getCurrentUser()?.accessToken;
+    if (!accessToken || typeof handler !== "function") {
+      return () => {};
+    }
+    const socket = getRealtimeSocket(accessToken);
+    if (!socket) return () => {};
+
+    const onNewNotification = (payload) => {
+      clearMineCache();
+      handler(payload);
+    };
+
+    socket.on("notification:new", onNewNotification);
+    return () => {
+      socket.off("notification:new", onNewNotification);
+    };
+  },
 };
 
 export default notificationService;

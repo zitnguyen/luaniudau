@@ -8,7 +8,7 @@ const { validateObjectIdParam } = require("../middleware/paramValidationMiddlewa
 router.get(
   "/export/:studentId/:classId",
   protect,
-  authorize("Admin", "Teacher"),
+  authorize("Admin", "Teacher", "Parent"),
   validateObjectIdParam("studentId"),
   validateObjectIdParam("classId"),
   progressController.exportProgressReport,
@@ -16,7 +16,7 @@ router.get(
 router.get(
   "/:studentId/:classId/export",
   protect,
-  authorize("Admin", "Teacher"),
+  authorize("Admin", "Teacher", "Parent"),
   validateObjectIdParam("studentId"),
   validateObjectIdParam("classId"),
   progressController.exportProgressReport,
@@ -24,7 +24,7 @@ router.get(
 router.get(
   "/:studentId/:classId",
   protect,
-  authorize("Admin", "Teacher"),
+  authorize("Admin", "Teacher", "Parent"),
   validateObjectIdParam("studentId"),
   validateObjectIdParam("classId"),
   progressController.getProgress,

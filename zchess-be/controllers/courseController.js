@@ -39,6 +39,11 @@ exports.getMyCourses = asyncHandler(async (req, res) => {
   res.json({ courses });
 });
 
+exports.getParentChildrenCourses = asyncHandler(async (req, res) => {
+  const rows = await courseService.getParentChildrenCourses(req.user._id);
+  res.json({ children: rows });
+});
+
 exports.getCourseAccess = asyncHandler(async (req, res) => {
   const users = await courseService.getCourseAccess(req.params.id);
   res.json({ users });

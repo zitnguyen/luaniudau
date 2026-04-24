@@ -5,6 +5,7 @@ const Notification = require("../models/Notification");
 const NotificationRecipient = require("../models/NotificationRecipient");
 const User = require("../models/User");
 const asyncHandler = require("../middleware/asyncHandler");
+const { emitNotificationToUsers } = require("../realtime/socketHub");
 
 function assertOrderAccess(order, user) {
   if (!user) return false;
@@ -80,6 +81,10 @@ exports.createOrder = asyncHandler(async (req, res) => {
         })),
         { ordered: false },
       );
+      emitNotificationToUsers(
+        adminUsers.map((admin) => admin._id),
+        { type: "ORDER_PENDING_CREATED", notificationId: notification._id },
+      );
     }
   } catch (notifyError) {
     // Do not block order creation if notification dispatch fails.
@@ -147,6 +152,7 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
       .json({ message: "Chỉ Admin mới có quyền duyệt trạng thái đơn hàng." });
   }
 
+  const previousStatus = order.status;
   order.status = status || order.status;
   order.transactionId = transactionId || order.transactionId;
   if (status === "completed") {
@@ -175,6 +181,48 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
           },
         })),
       );
+    }
+
+    // Notify buyer (parent) when admin approves the order.
+    if (isAdmin && previousStatus !== "completed") {
+      try {
+        const buyer = await User.findById(updatedOrder.userId).select(
+          "_id role fullName username",
+        );
+        if (buyer && String(buyer.role || "").toLowerCase() === "parent") {
+          const courseIds = (updatedOrder.items || [])
+            .map((item) => item?.courseId)
+            .filter(Boolean);
+          const courses = await Course.find({ _id: { $in: courseIds } }).select("title");
+          const courseTitleMap = new Map(
+            courses.map((course) => [String(course._id), course.title || "Khóa học"]),
+          );
+          const courseTitles = courseIds
+            .map((id) => courseTitleMap.get(String(id)))
+            .filter(Boolean);
+          const shortOrderId = String(updatedOrder._id).slice(-6).toUpperCase();
+
+          const notification = await Notification.create({
+            title: "Đơn hàng khóa học đã được duyệt",
+            content: `Đơn ORD-${shortOrderId} của bạn đã được Admin duyệt. Bạn có thể vào học ngay${courseTitles.length ? `: ${courseTitles.join(", ")}` : ""}.`,
+            createdBy: req.user._id,
+          });
+
+          await NotificationRecipient.create({
+            notificationId: notification._id,
+            userId: buyer._id,
+            roleSnapshot: "Parent",
+            isRead: false,
+            readAt: null,
+          });
+          emitNotificationToUsers([buyer._id], {
+            type: "ORDER_APPROVED",
+            notificationId: notification._id,
+          });
+        }
+      } catch (notifyError) {
+        console.error("Failed to notify parent on order approval:", notifyError);
+      }
     }
   }
   res.json(updatedOrder);

@@ -19,6 +19,10 @@ const settingSchema = new mongoose.Schema(
     bankAccountName: { type: String, trim: true, default: "" },
     paymentQrUrl: { type: String, trim: true, default: "" },
     paymentTransferPrefix: { type: String, trim: true, default: "KHOAHOC" },
+    announcement_enabled: { type: Boolean, default: false },
+    announcement_text: { type: String, trim: true, default: "" },
+    announcement_bg_color: { type: String, trim: true, default: "#ff0000" },
+    announcement_text_color: { type: String, trim: true, default: "#ffffff" },
     publicCms: {
       type: mongoose.Schema.Types.Mixed,
       default: () => ({

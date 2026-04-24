@@ -64,10 +64,13 @@ const ParentDashboard = () => {
                                     <Calendar size={16} />
                                     Lịch học
                                 </Link>
-                                <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+                                <Link
+                                    to={`/parent/progress?studentId=${child._id}`}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                                >
                                     <BookOpen size={16} />
                                     Kết quả
-                                </button>
+                                </Link>
                             </div>
                         </div>
                     </div>

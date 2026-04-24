@@ -81,6 +81,9 @@ const AdminHeader = () => {
 
     let timer = null;
     let stopped = false;
+    const POLL_FOREGROUND_MS = 3000;
+    const POLL_BACKGROUND_MS = 15000;
+    const POLL_RATE_LIMIT_MS = 60000;
 
     const schedule = (delay) => {
       if (stopped) return;
@@ -89,19 +92,29 @@ const AdminHeader = () => {
 
     const tick = async () => {
       const status = await fetchUnreadCount();
-      const role = getCurrentRole();
       const isForeground = document.visibilityState === 'visible' && document.hasFocus();
       const shouldPollSlowly = !isForeground;
       if (status === 429) {
-        schedule(60000);
+        schedule(POLL_RATE_LIMIT_MS);
       } else if (shouldPollSlowly) {
-        schedule(20000);
+        schedule(POLL_BACKGROUND_MS);
       } else {
-        schedule(8000);
+        schedule(POLL_FOREGROUND_MS);
       }
     };
 
     tick();
+
+    const handleWakeUp = () => {
+      if (stopped) return;
+      // Fetch immediately when user comes back to tab/window.
+      fetchUnreadCount();
+    };
+    document.addEventListener("visibilitychange", handleWakeUp);
+    window.addEventListener("focus", handleWakeUp);
+    const unsubscribeRealtime = notificationService.subscribeRealtime(() => {
+      fetchUnreadCount();
+    });
 
     return () => {
       isMounted = false;
@@ -109,6 +122,9 @@ const AdminHeader = () => {
       if (timer) {
         window.clearTimeout(timer);
       }
+      document.removeEventListener("visibilitychange", handleWakeUp);
+      window.removeEventListener("focus", handleWakeUp);
+      unsubscribeRealtime();
     };
   }, [currentUser?._id, currentUser?.userId, currentUser?.role]);
 
@@ -127,7 +143,7 @@ const AdminHeader = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 h-16 px-6 flex items-center justify-end gap-4 sticky top-0 z-20">
+    <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 h-16 px-3 sm:px-6 flex items-center justify-end gap-2 sm:gap-4 sticky top-0 z-20">
         <ThemeToggle />
         <button
           onClick={() => navigate('/')}
@@ -141,7 +157,6 @@ const AdminHeader = () => {
           onDoubleClick={() => {
             debugPlayNotificationSound().then((ok) => {
               if (!ok) {
-                // eslint-disable-next-line no-alert
                 alert('Trình duyệt đang chặn âm thanh. Hãy click bất kỳ vào trang rồi thử lại.');
               }
             });
@@ -156,8 +171,8 @@ const AdminHeader = () => {
               </span>
             )}
         </button>
-        <div className="h-8 w-[1px] bg-gray-200 dark:bg-slate-700 mx-1"></div>
-        <div className="flex items-center gap-3">
+        <div className="h-8 w-[1px] bg-gray-200 dark:bg-slate-700 mx-0 sm:mx-1"></div>
+        <div className="flex items-center gap-1 sm:gap-3">
             <div className="text-right hidden sm:block">
                 <div className="text-sm font-medium text-gray-900 dark:text-white">
                   {currentUser?.fullName || currentUser?.username || "User"}

@@ -13,6 +13,10 @@ const defaultSettings = {
   bankAccountName: "",
   paymentQrUrl: "",
   paymentTransferPrefix: "KHOAHOC",
+  announcement_enabled: false,
+  announcement_text: "",
+  announcement_bg_color: "#ff0000",
+  announcement_text_color: "#ffffff",
 };
 
 const SystemSettingsContext = createContext({

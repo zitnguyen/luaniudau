@@ -6,6 +6,7 @@ import ChapterManager from './components/ChapterManager';
 import userService from '../../../services/userService';
 import studentService from '../../../services/studentService';
 import parentService from '../../../services/parentService';
+import { toast } from "sonner";
 
 const AdminCourseForm = () => {
     const { id } = useParams();
@@ -143,10 +144,10 @@ const AdminCourseForm = () => {
             let response;
             if (isEditMode) {
                 response = await courseService.updateCourse(id, formData);
-                alert("Cập nhật thành công!");
+                toast.success("Cập nhật thành công!");
             } else {
                 response = await courseService.createCourse(formData);
-                alert("Tạo khóa học thành công! Chuyển sang thêm bài học.");
+                toast.success("Tạo khóa học thành công! Chuyển sang thêm bài học.");
                 navigate(`/admin/courses/${response._id}/edit`);
                 setActiveTab('curriculum');
             }
@@ -154,7 +155,7 @@ const AdminCourseForm = () => {
             console.error("Error saving course:", error);
             const message = error.response?.data?.message || error.message || "Lỗi khi lưu khóa học";
             setError(message);
-            alert("Lỗi khi lưu khóa học: " + message);
+            toast.error("Lỗi khi lưu khóa học: " + message);
         } finally {
             setLoading(false);
         }
@@ -172,11 +173,11 @@ const AdminCourseForm = () => {
         try {
             setSavingAccess(true);
             await courseService.setCourseAccess(id, accessUserIds);
-            alert("Đã cập nhật quyền xem nội dung khóa học.");
+            toast.success("Đã cập nhật quyền xem nội dung khóa học.");
         } catch (e) {
             const status = e?.response?.status;
             const msg = e?.response?.data?.message || e?.message || "Không lưu được phân quyền.";
-            alert(`[${status || "ERR"}] ${msg}`);
+            toast.error(`[${status || "ERR"}] ${msg}`);
         } finally {
             setSavingAccess(false);
         }
@@ -191,7 +192,7 @@ const AdminCourseForm = () => {
             if (!uploadedUrl) throw new Error("Không lấy được URL ảnh");
             setFormData((prev) => ({ ...prev, [field]: uploadedUrl }));
         } catch (error) {
-            alert(error?.response?.data?.message || error.message || "Upload ảnh thất bại.");
+            toast.error(error?.response?.data?.message || error.message || "Upload ảnh thất bại.");
         } finally {
             setUploadingField("");
             event.target.value = "";
@@ -253,7 +254,7 @@ const AdminCourseForm = () => {
                 <button
                     onClick={() => {
                         if (!isEditMode) {
-                            alert("Vui lòng lưu thông tin khóa học trước khi thêm bài học.");
+                            toast.error("Vui lòng lưu thông tin khóa học trước khi thêm bài học.");
                             return;
                         }
                         setActiveTab('curriculum');
@@ -268,7 +269,7 @@ const AdminCourseForm = () => {
                 <button
                     onClick={() => {
                         if (!isEditMode) {
-                            alert("Vui lòng lưu khóa học trước khi phân quyền.");
+                            toast.error("Vui lòng lưu khóa học trước khi phân quyền.");
                             return;
                         }
                         setActiveTab('access');

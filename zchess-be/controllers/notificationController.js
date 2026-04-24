@@ -2,6 +2,7 @@ const asyncHandler = require("../middleware/asyncHandler");
 const Notification = require("../models/Notification");
 const NotificationRecipient = require("../models/NotificationRecipient");
 const User = require("../models/User");
+const { emitNotificationToUsers } = require("../realtime/socketHub");
 
 const TARGETABLE_ROLES = ["Teacher", "Parent", "Student"];
 
@@ -56,6 +57,10 @@ exports.createNotification = asyncHandler(async (req, res) => {
       readAt: null,
     })),
     { ordered: false },
+  );
+  emitNotificationToUsers(
+    recipients.map((recipient) => recipient._id),
+    { type: "MANUAL_NOTIFICATION", notificationId: notification._id },
   );
 
   res.status(201).json({

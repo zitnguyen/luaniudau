@@ -79,6 +79,10 @@ const SystemSettings = () => {
         bankAccountName: formData.bankAccountName || "",
         paymentQrUrl: formData.paymentQrUrl || "",
         paymentTransferPrefix: formData.paymentTransferPrefix || "KHOAHOC",
+        announcement_enabled: !!formData.announcement_enabled,
+        announcement_text: formData.announcement_text || "",
+        announcement_bg_color: formData.announcement_bg_color || "#ff0000",
+        announcement_text_color: formData.announcement_text_color || "#ffffff",
       };
       const saved = await settingsService.update(payload);
       setSettingsOptimistic(saved);
@@ -289,6 +293,83 @@ const SystemSettings = () => {
                 />
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="border-t pt-5">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">Thanh thông báo (Announcement Bar)</h3>
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                name="announcement_enabled"
+                checked={!!formData.announcement_enabled}
+                onChange={(e) => handleChange({ target: { name: 'announcement_enabled', value: e.target.checked }})}
+                className="w-4 h-4 text-primary rounded border-gray-300"
+              />
+              Hiển thị thanh thông báo
+            </label>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nội dung thông báo</label>
+              <input 
+                name="announcement_text" 
+                value={formData.announcement_text || ""} 
+                onChange={handleChange} 
+                className="w-full rounded-lg border border-gray-200 px-3 py-2" 
+                placeholder="Nhập nội dung sẽ chạy chữ trên thanh thông báo..." 
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Màu nền (Background Color)</label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="color" 
+                    name="announcement_bg_color" 
+                    value={formData.announcement_bg_color || "#ff0000"} 
+                    onChange={handleChange} 
+                    className="h-10 w-10 rounded cursor-pointer border-0 p-0" 
+                  />
+                  <input 
+                    name="announcement_bg_color" 
+                    value={formData.announcement_bg_color || "#ff0000"} 
+                    onChange={handleChange} 
+                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 uppercase font-mono text-sm" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Màu chữ (Text Color)</label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="color" 
+                    name="announcement_text_color" 
+                    value={formData.announcement_text_color || "#ffffff"} 
+                    onChange={handleChange} 
+                    className="h-10 w-10 rounded cursor-pointer border-0 p-0" 
+                  />
+                  <input 
+                    name="announcement_text_color" 
+                    value={formData.announcement_text_color || "#ffffff"} 
+                    onChange={handleChange} 
+                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 uppercase font-mono text-sm" 
+                  />
+                </div>
+              </div>
+            </div>
+            {formData.announcement_enabled && formData.announcement_text && (
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Xem trước (Preview)</label>
+                <div 
+                  className="w-full overflow-hidden whitespace-nowrap text-sm py-2 px-4 rounded-lg flex items-center"
+                  style={{ backgroundColor: formData.announcement_bg_color, color: formData.announcement_text_color }}
+                >
+                  <p>{formData.announcement_text}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

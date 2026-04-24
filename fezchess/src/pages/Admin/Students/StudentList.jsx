@@ -27,6 +27,15 @@ const getStudentStatus = (student) => {
   };
 };
 
+const getStudentProgress = (student) => {
+  const studied = Number(student?.completedLessons ?? 0);
+  const total = Number(student?.totalLessons ?? student?.totalSessions ?? 0);
+  return {
+    studied: Number.isFinite(studied) ? studied : 0,
+    total: Number.isFinite(total) ? total : 0,
+  };
+};
+
 const StudentList = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -166,22 +175,24 @@ const StudentList = () => {
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Ngày sinh</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">SĐT</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Parent</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Tiến độ</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Trạng thái</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
               {loading ? (
-                <TableSkeleton rows={6} cols={6} />
+                <TableSkeleton rows={6} cols={7} />
               ) : filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-500">
                     Không có học viên phù hợp bộ lọc.
                   </td>
                 </tr>
               ) : (
                 filteredStudents.map((student) => {
                   const status = getStudentStatus(student);
+                  const progress = getStudentProgress(student);
                   return (
                     <tr
                       key={student._id}
@@ -193,6 +204,10 @@ const StudentList = () => {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">{student.parentId?.phone || "-"}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{student.parentId?.fullName || "-"}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        <span className="font-semibold">{progress.studied}</span>
+                        <span className="text-gray-500"> / {progress.total} buổi</span>
+                      </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${status.className}`}>
                           {status.label}

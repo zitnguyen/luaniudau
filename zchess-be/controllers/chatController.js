@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const asyncHandler = require("../middleware/asyncHandler");
 const User = require("../models/User");
 const Message = require("../models/Message");
+const { emitMessageToUsers } = require("../realtime/socketHub");
 
 const isAdminRole = (role) => String(role || "").toLowerCase() === "admin";
 
@@ -52,7 +53,9 @@ exports.getContacts = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        lastMessageAt: { $ifNull: [{ $arrayElemAt: ["$lastMessage.createdAt", 0] }, null] },
+        lastMessageAt: {
+          $ifNull: [{ $arrayElemAt: ["$lastMessage.createdAt", 0] }, null],
+        },
       },
     },
     {
@@ -81,11 +84,15 @@ exports.getConversation = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Invalid user id" });
   }
 
-  const other = await User.findById(userId).select("_id role fullName username");
+  const other = await User.findById(userId).select(
+    "_id role fullName username",
+  );
   if (!other) return res.status(404).json({ message: "User not found" });
 
   if (!canChat({ senderRole: me.role, recipientRole: other.role })) {
-    return res.status(403).json({ message: "Không có quyền nhắn tin với tài khoản này" });
+    return res
+      .status(403)
+      .json({ message: "Không có quyền nhắn tin với tài khoản này" });
   }
 
   const messages = await Message.find({
@@ -116,16 +123,23 @@ exports.sendMessage = asyncHandler(async (req, res) => {
   const normalizedContent = String(content || "").trim();
   const normalizedImageUrl = String(imageUrl || "").trim();
   if (!normalizedContent && !normalizedImageUrl) {
-    return res.status(400).json({ message: "Tin nhắn phải có nội dung hoặc ảnh" });
+    return res
+      .status(400)
+      .json({ message: "Tin nhắn phải có nội dung hoặc ảnh" });
   }
 
   const recipient = await User.findById(recipientId).select("_id role");
-  if (!recipient) return res.status(404).json({ message: "User nhận không tồn tại" });
+  if (!recipient)
+    return res.status(404).json({ message: "User nhận không tồn tại" });
   if (String(recipient._id) === String(me._id)) {
-    return res.status(400).json({ message: "Không thể tự nhắn cho chính mình" });
+    return res
+      .status(400)
+      .json({ message: "Không thể tự nhắn cho chính mình" });
   }
   if (!canChat({ senderRole: me.role, recipientRole: recipient.role })) {
-    return res.status(403).json({ message: "Bạn không có quyền nhắn tin cho tài khoản này" });
+    return res
+      .status(403)
+      .json({ message: "Bạn không có quyền nhắn tin cho tài khoản này" });
   }
 
   const created = await Message.create({
@@ -136,6 +150,18 @@ exports.sendMessage = asyncHandler(async (req, res) => {
   });
 
   const message = await Message.findById(created._id).lean();
+
+  // Emit message in real-time to both sender and recipient
+  emitMessageToUsers(recipient._id, me._id, {
+    _id: message._id,
+    senderId: message.senderId,
+    recipientId: message.recipientId,
+    content: message.content,
+    imageUrl: message.imageUrl,
+    createdAt: message.createdAt,
+    updatedAt: message.updatedAt,
+  });
+
   res.status(201).json(message);
 });
 
@@ -150,7 +176,10 @@ exports.getUnreadSummary = asyncHandler(async (req, res) => {
     acc[String(item._id)] = Number(item.count || 0);
     return acc;
   }, {});
-  const totalUnread = unread.reduce((sum, item) => sum + Number(item.count || 0), 0);
+  const totalUnread = unread.reduce(
+    (sum, item) => sum + Number(item.count || 0),
+    0,
+  );
 
   res.json({ totalUnread, bySender });
 });

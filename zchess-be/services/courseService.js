@@ -332,3 +332,115 @@ exports.getMyCourses = async (userId) => {
 
   return courses;
 };
+
+exports.getParentChildrenCourses = async (parentUserId) => {
+  const children = await Student.find({
+    parentId: parentUserId,
+    isDeleted: { $ne: true },
+  })
+    .select("_id fullName")
+    .sort({ fullName: 1 });
+
+  if (!children.length) return [];
+
+  const childIds = children.map((child) => child._id);
+  const accessRows = await CourseAccess.find({
+    userId: { $in: [...childIds, parentUserId] },
+  }).populate("courseId");
+
+  if (!accessRows.length) {
+    return children.map((child) => ({
+      studentId: child._id,
+      studentName: child.fullName,
+      courses: [],
+    }));
+  }
+
+  const validCourseDocs = accessRows
+    .map((row) => row.courseId)
+    .filter((course) => course && course._id);
+  const courseIds = [...new Set(validCourseDocs.map((course) => String(course._id)))];
+
+  const chapters = await Chapter.find({
+    courseId: { $in: courseIds },
+  })
+    .select("_id courseId order")
+    .sort({ order: 1 });
+
+  const chapterIds = chapters.map((chapter) => chapter._id);
+  const lessons = await Lesson.find({
+    chapterId: { $in: chapterIds },
+  })
+    .select("_id chapterId order")
+    .sort({ order: 1 });
+
+  const firstLessonByCourse = new Map();
+  const chapterCourseMap = new Map(
+    chapters.map((chapter) => [String(chapter._id), String(chapter.courseId)]),
+  );
+  for (const lesson of lessons) {
+    const courseId = chapterCourseMap.get(String(lesson.chapterId));
+    if (!courseId) continue;
+    if (!firstLessonByCourse.has(courseId)) {
+      firstLessonByCourse.set(courseId, String(lesson._id));
+    }
+  }
+
+  const resultByStudent = new Map(
+    children.map((child) => [
+      String(child._id),
+      {
+        studentId: child._id,
+        studentName: child.fullName,
+        courses: [],
+      },
+    ]),
+  );
+
+  const seenByStudentCourse = new Set();
+  const parentDirectCourses = [];
+  for (const row of accessRows) {
+    const ownerUserId = String(row.userId);
+    const course = row.courseId;
+    if (!course?._id) continue;
+
+    if (ownerUserId === String(parentUserId)) {
+      parentDirectCourses.push(course);
+      continue;
+    }
+
+    if (!resultByStudent.has(ownerUserId)) continue;
+    const dedupeKey = `${ownerUserId}_${course._id}`;
+    if (seenByStudentCourse.has(dedupeKey)) continue;
+    seenByStudentCourse.add(dedupeKey);
+
+    resultByStudent.get(ownerUserId).courses.push({
+      _id: course._id,
+      title: course.title,
+      slug: course.slug,
+      thumbnail: course.thumbnail,
+      description: course.description || "",
+      firstLessonId: firstLessonByCourse.get(String(course._id)) || null,
+    });
+  }
+
+  // If access is granted directly to Parent account, show those courses across children cards.
+  for (const child of children) {
+    const studentId = String(child._id);
+    for (const course of parentDirectCourses) {
+      const dedupeKey = `${studentId}_${course._id}`;
+      if (seenByStudentCourse.has(dedupeKey)) continue;
+      seenByStudentCourse.add(dedupeKey);
+      resultByStudent.get(studentId).courses.push({
+        _id: course._id,
+        title: course.title,
+        slug: course.slug,
+        thumbnail: course.thumbnail,
+        description: course.description || "",
+        firstLessonId: firstLessonByCourse.get(String(course._id)) || null,
+      });
+    }
+  }
+
+  return Array.from(resultByStudent.values());
+};

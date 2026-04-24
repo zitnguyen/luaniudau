@@ -63,6 +63,9 @@ const courseService = {
   getMyLessonChessProgress: async (lessonId) => {
       return await axiosClient.get(`/lessons/${lessonId}/chess-progress`);
   },
+  getParentMyCourses: async () => {
+      return await axiosClient.get("/courses/parent/my-courses");
+  },
   saveMyLessonChessProgress: async (lessonId, payload) => {
       return await axiosClient.put(`/lessons/${lessonId}/chess-progress`, payload);
   },

@@ -84,12 +84,30 @@ const ensureTeacherCanAccessStudentInClass = async ({
   return Boolean(ownClass);
 };
 
+const ensureParentCanAccessStudent = async ({ parentUserId, studentId }) => {
+  const ownStudent = await Student.exists({
+    _id: studentId,
+    parentId: parentUserId,
+    isDeleted: { $ne: true },
+  });
+  return Boolean(ownStudent);
+};
+
 exports.getProgress = asyncHandler(async (req, res) => {
   const { studentId, classId } = req.params;
   if (req.user?.role === "Teacher") {
     const allowed = await ensureTeacherCanAccessStudentInClass({
       teacherId: req.user._id,
       classId,
+      studentId,
+    });
+    if (!allowed) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+  }
+  if (req.user?.role === "Parent") {
+    const allowed = await ensureParentCanAccessStudent({
+      parentUserId: req.user._id,
       studentId,
     });
     if (!allowed) {
@@ -163,6 +181,15 @@ exports.exportProgressReport = asyncHandler(async (req, res) => {
     const allowed = await ensureTeacherCanAccessStudentInClass({
       teacherId: req.user._id,
       classId,
+      studentId,
+    });
+    if (!allowed) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+  }
+  if (req.user?.role === "Parent") {
+    const allowed = await ensureParentCanAccessStudent({
+      parentUserId: req.user._id,
       studentId,
     });
     if (!allowed) {

@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation } from "react-router-dom";
 import StudentSidebar from '../components/layout/Sidebar/StudentSidebar';
 import AdminHeader from '../components/layout/AdminHeader';
+import AnnouncementBar from '../components/common/AnnouncementBar';
 
 const StudentLayout = ({ children }) => {
   const location = useLocation();
@@ -14,8 +15,9 @@ const StudentLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
       <StudentSidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col max-w-full">
         <AdminHeader />
+        <AnnouncementBar />
         <main ref={contentRef} className="flex-1 p-6 overflow-y-auto">
           {children}
         </main>

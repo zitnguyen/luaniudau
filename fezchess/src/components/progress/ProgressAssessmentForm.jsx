@@ -16,6 +16,7 @@ const ProgressAssessmentForm = ({
   onExport,
   showDelete = true,
   showExport = true,
+  readOnly = false,
   studentName,
   className,
 }) => {
@@ -67,24 +68,26 @@ const ProgressAssessmentForm = ({
               Xuất File Word
             </button>
           )}
-          <button
-            onClick={onSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? "Đang lưu..." : "Lưu Thay Đổi"}
-          </button>
+          {!readOnly && (
+            <button
+              onClick={onSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? "Đang lưu..." : "Lưu Thay Đổi"}
+            </button>
+          )}
         </div>
       </div>
 
       {(studentName || className) && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
-          <div className="text-sm text-blue-900">
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-6">
+          <div className="text-base md:text-lg text-blue-900">
             <span className="font-semibold">Học viên:</span>{" "}
             {studentName || "N/A"}
           </div>
-          <div className="text-sm text-blue-800 mt-1">
+          <div className="text-base md:text-lg text-blue-800 mt-2">
             <span className="font-semibold">Lớp:</span> {className || "N/A"}
           </div>
         </div>
@@ -110,9 +113,11 @@ const ProgressAssessmentForm = ({
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
                       Nội Dung Học
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                      Thao Tác
-                    </th>
+                    {!readOnly && (
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                        Thao Tác
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -129,6 +134,7 @@ const ProgressAssessmentForm = ({
                           className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:border-primary text-sm min-h-[80px]"
                           placeholder="Nhập nội dung bài học..."
                           value={session.content || ""}
+                          readOnly={readOnly}
                           onChange={(e) => {
                             const newSessions = [...sessions];
                             newSessions[index].content = e.target.value;
@@ -136,17 +142,19 @@ const ProgressAssessmentForm = ({
                           }}
                         />
                       </td>
-                      <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSession(index)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                          title={`Xóa buổi ${index + 1}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Xóa
-                        </button>
-                      </td>
+                      {!readOnly && (
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSession(index)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                            title={`Xóa buổi ${index + 1}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Xóa
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -167,6 +175,7 @@ const ProgressAssessmentForm = ({
               <textarea
                 className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-primary min-h-[100px]"
                 value={teacherFeedback?.strengths || ""}
+                readOnly={readOnly}
                 onChange={(e) =>
                   setTeacherFeedback({
                     ...teacherFeedback,
@@ -182,6 +191,7 @@ const ProgressAssessmentForm = ({
               <textarea
                 className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-primary min-h-[100px]"
                 value={teacherFeedback?.weaknesses || ""}
+                readOnly={readOnly}
                 onChange={(e) =>
                   setTeacherFeedback({
                     ...teacherFeedback,
@@ -197,6 +207,7 @@ const ProgressAssessmentForm = ({
               <textarea
                 className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-primary min-h-[100px]"
                 value={teacherFeedback?.improvementPlan || ""}
+                readOnly={readOnly}
                 onChange={(e) =>
                   setTeacherFeedback({
                     ...teacherFeedback,
