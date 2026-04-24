@@ -181,9 +181,8 @@ const ClassForm = () => {
         schedule: response.schedule || "",
         status: response.status || "Pending",
       });
-      // Set selected students from response
-      if (response.students && Array.isArray(response.students)) {
-          setSelectedStudents(response.students.map(s => s._id));
+      if (Array.isArray(response.studentIds)) {
+          setSelectedStudents(response.studentIds.map((s) => s._id || s));
       }
     } catch (err) {
       setError("Lỗi khi tải dữ liệu lớp học");
@@ -207,13 +206,19 @@ const ClassForm = () => {
         setError("Vui lòng điền các trường bắt buộc (ID, Tên lớp)");
         return;
     }
+    const hasDaySelection = /T2|T3|T4|T5|T6|T7|CN/.test(formData.schedule || "");
+    const hasValidTime = /\(([01]\d|2[0-3]):([0-5]\d)\)/.test(formData.schedule || "");
+    if (hasDaySelection && !hasValidTime) {
+      setError("Bạn đã chọn ngày học nhưng chưa chọn giờ bắt đầu hợp lệ.");
+      return;
+    }
 
     try {
       setSubmitting(true);
       const payload = { 
           ...formData, 
-          classId: Number(formData.classId),
-          students: selectedStudents // Send selected student IDs
+          classId: String(formData.classId).trim(),
+          studentIds: selectedStudents,
       };
       let savedId = id;
       if (isEditMode) {
@@ -261,7 +266,8 @@ const ClassForm = () => {
           </div>
         </div>
         <button 
-            onClick={handleSubmit} 
+            type="submit"
+            form="class-form"
             disabled={submitting} 
             className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all disabled:opacity-70 disabled:cursor-not-allowed font-medium"
         >
@@ -277,7 +283,7 @@ const ClassForm = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <form id="class-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Basic Info */}
         <div className="lg:col-span-2 space-y-6">
             {/* General Info Card */}
@@ -440,9 +446,13 @@ const ClassForm = () => {
                                         checked={selectedStudents.includes(student._id)}
                                         onChange={(e) => {
                                             if (e.target.checked) {
-                                                setSelectedStudents([...selectedStudents, student._id]);
+                                                setSelectedStudents((prev) =>
+                                                  prev.includes(student._id) ? prev : [...prev, student._id],
+                                                );
                                             } else {
-                                                setSelectedStudents(selectedStudents.filter(id => id !== student._id));
+                                                setSelectedStudents((prev) =>
+                                                  prev.filter((id) => id !== student._id),
+                                                );
                                             }
                                         }}
                                         className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
@@ -521,7 +531,7 @@ const ClassForm = () => {
             <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100">
                 <h4 className="text-blue-800 font-semibold mb-2 text-sm">Lưu ý</h4>
                 <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
-                    <li>Sinh viên được thêm vào lớp sẽ tự động được ghi danh.</li>
+                    <li>Học viên được gán trực tiếp vào lớp học (không qua ghi danh trung gian).</li>
                     <li>Lịch học sẽ được hiển thị trên thời khóa biểu của giáo viên và học viên.</li>
                     <li>Đảm bảo mã lớp là duy nhất.</li>
                 </ul>

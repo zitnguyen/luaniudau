@@ -2,8 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import attendanceService from "../../../../services/attendanceService";
 import classService from "../../../../services/classService";
-import enrollmentService from "../../../../services/enrollmentService";
-import scheduleService from "../../../../services/scheduleService";
 
 const TeacherAttendance = () => {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -17,12 +15,12 @@ const TeacherAttendance = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const hasScheduleOnDate = (schedule, dateValue) => {
-    if (!schedule || !Array.isArray(schedule.slots) || schedule.slots.length === 0) {
+  const hasScheduleOnDate = (classSlots, dateValue) => {
+    if (!Array.isArray(classSlots) || classSlots.length === 0) {
       return false;
     }
     const targetDay = new Date(dateValue).getDay(); // 0..6
-    return schedule.slots.some(
+    return classSlots.some(
       (slot) => Number(slot?.day) === Number(targetDay),
     );
   };
@@ -48,28 +46,26 @@ const TeacherAttendance = () => {
       }
       try {
         setLoading(true);
-        const [enrollments, attendance] = await Promise.all([
-          enrollmentService.getAll({ classId: selectedClassId }),
+        const [selectedClass, attendance] = await Promise.all([
+          classService.getById(selectedClassId),
           attendanceService.getByClassAndDate(selectedClassId, selectedDate),
         ]);
-        const enrs = Array.isArray(enrollments) ? enrollments : [];
+        const students = Array.isArray(selectedClass?.studentIds)
+          ? selectedClass.studentIds
+          : [];
         const att = Array.isArray(attendance) ? attendance : [];
-        const schedules = await Promise.all(
-          enrs.map((e) => {
-            const sid = String(e.studentId?._id || e.studentId);
-            return scheduleService.getByStudentId(sid);
-          }),
-        );
+        const classSlots = Array.isArray(selectedClass?.scheduleSlots)
+          ? selectedClass.scheduleSlots
+          : [];
 
-        const merged = enrs.map((e, index) => {
-          const sid = String(e.studentId?._id || e.studentId);
+        const merged = students.map((student) => {
+          const sid = String(student?._id || student);
           const rec = att.find((a) => String(a.studentId?._id || a.studentId) === sid);
-          const schedule = schedules[index];
-          const hasScheduleToday = hasScheduleOnDate(schedule, selectedDate);
+          const hasScheduleToday = hasScheduleOnDate(classSlots, selectedDate);
           return {
             studentId: sid,
-            name: e.studentId?.fullName || "Học viên",
-            code: e.studentId?.studentId || "",
+            name: student?.fullName || "Học viên",
+            code: student?.studentId || "",
             status: rec?.status || "absent",
             note: rec?.note || "",
             hasScheduleToday,

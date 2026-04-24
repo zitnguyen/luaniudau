@@ -4,6 +4,7 @@ import courseService from '../../services/courseService';
 import { PlayCircle, User, Search, Filter, BookOpen, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { usePublicCms } from '../../context/PublicCmsContext';
+import PublicPageQuickEditor from "../../components/cms/PublicPageQuickEditor";
 
 const CourseStorePage = () => {
     const [courses, setCourses] = useState([]);
@@ -46,7 +47,7 @@ const CourseStorePage = () => {
     const levels = ["Beginner", "Intermediate", "Advanced", "All Levels"];
 
     return (
-        <div className="bg-gray-50 min-h-screen pb-20">
+        <div className="min-h-screen pb-20" style={{ backgroundColor: page?.pageBackgroundColor || "#F9FAFB", fontFamily: page?.fontFamily && page.fontFamily !== "inherit" ? page.fontFamily : undefined }}>
              {/* Header Section */}
              <div
                className="text-white py-16 text-center mb-8"
@@ -57,8 +58,8 @@ const CourseStorePage = () => {
                 backgroundPosition: "center",
                }}
              >
-                  <h1 className="text-4xl font-bold mb-4 font-heading">{page?.title || "KHO KHÓA HỌC VIDEO"}</h1>
-                  <p className="text-xl opacity-90 max-w-2xl mx-auto">
+                  <h1 className="text-4xl font-bold mb-4 font-heading" style={{ color: page?.titleColor || "#FFFFFF", fontSize: page?.titleFontSize || undefined }}>{page?.title || "KHO KHÓA HỌC VIDEO"}</h1>
+                  <p className="text-xl opacity-90 max-w-2xl mx-auto" style={{ color: page?.descriptionColor || "#E2E8F0", fontSize: page?.descriptionFontSize || undefined }}>
                       {page?.description || "Hệ thống bài giảng chất lượng cao, giúp bạn làm chủ bàn cờ từ Khai cuộc đến Tàn cuộc."}
                   </p>
              </div>
@@ -77,7 +78,7 @@ const CourseStorePage = () => {
                                 value={filters.search}
                                 onChange={handleSearchChange}
                             />
-                            <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                            <Search className="absolute left-3 top-2.5 text-gray-400" size={18} style={{ color: page?.iconColor || undefined }} />
                         </form>
 
                         {/* Filters */}
@@ -133,7 +134,7 @@ const CourseStorePage = () => {
                                         </div>
                                         
                                         <div className="p-5">
-                                            <div className="text-xs text-blue-600 font-semibold mb-2 uppercase tracking-wide">
+                                            <div className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: page?.iconColor || "#2563EB" }}>
                                                 {course.category}
                                             </div>
                                             <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 h-14">
@@ -143,17 +144,17 @@ const CourseStorePage = () => {
                                             <div className="space-y-2 text-sm text-gray-500 mt-4 pt-4 border-t border-gray-100">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
-                                                        <User size={16} />
+                                                        <User size={16} style={{ color: page?.iconColor || undefined }} />
                                                         <span>{course.instructor?.fullName || 'Daisy Team'}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
-                                                        <BookOpen size={16} />
+                                                        <BookOpen size={16} style={{ color: page?.iconColor || undefined }} />
                                                         <span>{course.totalLessons || 0} bài học</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <Users size={16} />
+                                                        <Users size={16} style={{ color: page?.iconColor || undefined }} />
                                                         <span>{course.enrolledStudents || 0} học viên</span>
                                                     </div>
                                                 </div>
@@ -166,6 +167,18 @@ const CourseStorePage = () => {
                     </>
                 )}
             </div>
+            <PublicPageQuickEditor
+                title="Chỉnh giao diện Khóa học"
+                fields={[
+                    { path: "courseStore.title", label: "Tiêu đề trang" },
+                    { path: "courseStore.description", label: "Mô tả trang", type: "textarea" },
+                    { path: "courseStore.buttonColor", label: "Màu nút", type: "color" },
+                    { path: "courseStore.buttonTextColor", label: "Màu chữ nút", type: "color" },
+                    { path: "courseStore.iconColor", label: "Màu icon", type: "color" },
+                    { path: "courseStore.pageBackgroundColor", label: "Màu nền trang", type: "color" },
+                    { path: "courseStore.titleColor", label: "Màu tiêu đề", type: "color" },
+                ]}
+            />
         </div>
     );
 };

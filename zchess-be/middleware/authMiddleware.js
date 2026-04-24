@@ -28,6 +28,16 @@ exports.protect = async (req, res, next) => {
       return res.status(401).json({ message: "User not found" });
     }
     req.user = user;
+    const now = Date.now();
+    const lastSeenMs = user.lastSeenAt ? new Date(user.lastSeenAt).getTime() : 0;
+    if (!user.isOnline || now - lastSeenMs > 60 * 1000) {
+      await User.findByIdAndUpdate(user._id, {
+        isOnline: true,
+        lastSeenAt: new Date(now),
+      });
+      req.user.isOnline = true;
+      req.user.lastSeenAt = new Date(now);
+    }
     next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {

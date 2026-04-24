@@ -2,11 +2,15 @@ const Lesson = require("../models/Lesson");
 const Chapter = require("../models/Chapter");
 const Student = require("../models/Student");
 const CourseAccess = require("../models/CourseAccess");
+const LessonChessProgress = require("../models/LessonChessProgress");
 const asyncHandler = require("../middleware/asyncHandler");
 
 exports.createLesson = asyncHandler(async (req, res) => {
   const { title, chapterId, type, content, duration, isFree, order } =
     req.body;
+  const initialMoves = Array.isArray(req.body?.initialMoves)
+    ? req.body.initialMoves.map((m) => String(m || "").trim()).filter(Boolean)
+    : [];
 
   const chapter = await Chapter.findById(chapterId);
   if (!chapter) {
@@ -18,7 +22,12 @@ exports.createLesson = asyncHandler(async (req, res) => {
     chapterId,
     courseId: chapter.courseId,
     type,
-    content,
+    content: type === "chess" ? "" : content,
+    chessMode: type === "chess" ? "internal" : req.body?.chessMode,
+    chessPlatform: type === "chess" ? "internal-board" : req.body?.chessPlatform,
+    initialFen: req.body?.initialFen,
+    initialPgn: type === "chess" ? String(req.body?.initialPgn || "") : "",
+    initialMoves: type === "chess" ? initialMoves : [],
     duration,
     isFree,
     order,
@@ -28,7 +37,19 @@ exports.createLesson = asyncHandler(async (req, res) => {
 });
 
 exports.updateLesson = asyncHandler(async (req, res) => {
-  const lesson = await Lesson.findByIdAndUpdate(req.params.id, req.body, {
+  const payload = { ...req.body };
+  payload.initialMoves = Array.isArray(payload?.initialMoves)
+    ? payload.initialMoves.map((m) => String(m || "").trim()).filter(Boolean)
+    : [];
+  if (payload?.initialPgn != null) {
+    payload.initialPgn = String(payload.initialPgn || "");
+  }
+  if (payload?.type === "chess") {
+    payload.content = "";
+    payload.chessMode = "internal";
+    payload.chessPlatform = "internal-board";
+  }
+  const lesson = await Lesson.findByIdAndUpdate(req.params.id, payload, {
     new: true,
     runValidators: true,
   });
@@ -84,4 +105,51 @@ exports.getLessonById = asyncHandler(async (req, res) => {
     });
   }
   res.json(lesson);
+});
+
+exports.getMyChessProgress = asyncHandler(async (req, res) => {
+  const lesson = await Lesson.findById(req.params.id);
+  if (!lesson) {
+    return res.status(404).json({ message: "Bài học không tồn tại" });
+  }
+  if (lesson.type !== "chess" || lesson.chessMode !== "internal") {
+    return res.status(400).json({ message: "Bài học này không dùng bàn cờ nội bộ" });
+  }
+  const progress = await LessonChessProgress.findOne({
+    lessonId: lesson._id,
+    userId: req.user._id,
+  });
+  return res.json(
+    progress || {
+      lessonId: lesson._id,
+      userId: req.user._id,
+      fen: lesson.initialFen || "",
+      pgn: "",
+      moves: [],
+    },
+  );
+});
+
+exports.saveMyChessProgress = asyncHandler(async (req, res) => {
+  const lesson = await Lesson.findById(req.params.id);
+  if (!lesson) {
+    return res.status(404).json({ message: "Bài học không tồn tại" });
+  }
+  if (lesson.type !== "chess" || lesson.chessMode !== "internal") {
+    return res.status(400).json({ message: "Bài học này không dùng bàn cờ nội bộ" });
+  }
+  const { fen = "", pgn = "", moves = [] } = req.body || {};
+  const progress = await LessonChessProgress.findOneAndUpdate(
+    {
+      lessonId: lesson._id,
+      userId: req.user._id,
+    },
+    {
+      fen: String(fen || ""),
+      pgn: String(pgn || ""),
+      moves: Array.isArray(moves) ? moves.map((m) => String(m || "")).filter(Boolean) : [],
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true },
+  );
+  return res.json(progress);
 });

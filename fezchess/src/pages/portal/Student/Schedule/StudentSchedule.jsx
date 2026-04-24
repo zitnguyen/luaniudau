@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Calendar, Search, ChevronDown, MapPin } from 'lucide-react';
-import enrollmentService from '../../../../services/enrollmentService';
-import studentService from '../../../../services/studentService';
-import { CURRENT_STUDENT_ID } from '../../../../mockAuth';
+import scheduleService from '../../../../services/scheduleService';
 
 const StudentSchedule = () => {
     const days = [
@@ -25,54 +23,29 @@ const StudentSchedule = () => {
     useEffect(() => {
         const fetchSchedule = async () => {
             try {
-                let id = CURRENT_STUDENT_ID;
-                if (!id) {
-                     const users = await studentService.getAll();
-                     if (users.length > 0) id = users[0]._id;
-                }
-
-                if (id) {
-                    const enrollments = await enrollmentService.getAll({ studentId: id });
-                    
-                    // Transform enrollments to events
-                    // Enrollment -> Class -> Schedule string (e.g. "T2/T4 (18:00)")
-                    const newEvents = [];
-                    enrollments.forEach(enroll => {
-                        const cls = enroll.classId;
-                        if (!cls || !cls.schedule) return;
-
-                        // Very basic parser for "T2/T4 (18:00)" or "T7/CN (09:00)"
-                        // 1. Extract Time
-                        const timeMatch = cls.schedule.match(/\((\d{2}:\d{2})\)/);
-                        const startTime = timeMatch ? timeMatch[1] : '00:00';
-                        
-                        // 2. Extract Days
-                        const diverseDays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-                        diverseDays.forEach((d, index) => {
-                            if (cls.schedule.includes(d)) {
-                                // Calculate slot index (mocking 1 hour duration per slot)
-                                // startSlotIndex: based on 08:00
-                                const startHour = parseInt(startTime.split(':')[0]);
-                                const startMin = parseInt(startTime.split(':')[1]);
-                                const offsetHours = startHour - 8; // 08:00 is index 0
-                                const offsetSlots = offsetHours + (startMin / 60);
-
-                                newEvents.push({
-                                    id: `${cls._id}-${d}`,
-                                    title: cls.className,
-                                    time: `${startTime} - ${startHour + 1}:${startMin === 0 ? '00' : startMin}`,
-                                    teacher: 'Giáo viên', // Backend class doesn't populate teacher name deeply yet maybe?
-                                    avatar: 'https://i.pravatar.cc/150?img=12', // Mock
-                                    dayIndex: index,
-                                    startSlotIndex: offsetSlots,
-                                    duration: 1.5, // Assume 1.5h
-                                    type: 'class'
-                                });
-                            }
+                const schedules = await scheduleService.getAll();
+                const newEvents = [];
+                schedules.forEach((item) => {
+                    const slots = Array.isArray(item.scheduleSlots) ? item.scheduleSlots : [];
+                    slots.forEach((slot, index) => {
+                        const startTime = slot?.time || '00:00';
+                        const [startHour, startMin] = startTime.split(':').map(Number);
+                        const offsetHours = startHour - 8;
+                        const offsetSlots = offsetHours + ((startMin || 0) / 60);
+                        const durationHours = Math.max(1, Number(slot?.duration || 90) / 60);
+                        const endHour = Math.floor(startHour + durationHours);
+                        newEvents.push({
+                            id: `${item.classId}-${slot.day}-${index}`,
+                            title: item.className,
+                            time: `${startTime} - ${String(endHour).padStart(2, '0')}:${String(startMin || 0).padStart(2, '0')}`,
+                            dayIndex: slot.day === 0 ? 6 : slot.day - 1,
+                            startSlotIndex: offsetSlots,
+                            duration: durationHours,
+                            type: 'class'
                         });
                     });
-                    setEvents(newEvents);
-                }
+                });
+                setEvents(newEvents);
             } catch (err) {
                 console.error("Failed to fetch schedule", err);
             } finally {

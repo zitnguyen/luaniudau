@@ -24,6 +24,9 @@ const PostDetail = () => {
 
     if (loading) return <div className="text-center py-20">Đang tải bài viết...</div>;
     if (!post) return <div className="text-center py-20">Không tìm thấy bài viết.</div>;
+    const galleryImages = Array.isArray(post.images) && post.images.length > 0
+      ? post.images
+      : (post.thumbnail ? [post.thumbnail] : []);
 
     return (
         <div className="container mx-auto px-4 py-12 max-w-4xl">
@@ -59,9 +62,20 @@ const PostDetail = () => {
                     </div>
                 </header>
 
-                {post.thumbnail && (
-                    <div className="mb-10 rounded-2xl overflow-hidden shadow-lg">
-                        <img src={post.thumbnail} alt={post.title} className="w-full object-cover max-h-[500px]" />
+                {galleryImages.length > 0 && (
+                    <div className="mb-10 space-y-3">
+                        <div className="rounded-2xl overflow-hidden shadow-lg">
+                            <img src={galleryImages[0]} alt={post.title} className="w-full object-cover max-h-[500px]" />
+                        </div>
+                        {galleryImages.length > 1 && (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {galleryImages.slice(1).map((img, idx) => (
+                                    <div key={`${img}-${idx}`} className="rounded-xl overflow-hidden border border-gray-100">
+                                        <img src={img} alt={`${post.title}-${idx + 2}`} className="w-full h-32 object-cover" />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 

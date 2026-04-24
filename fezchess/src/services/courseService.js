@@ -60,6 +60,12 @@ const courseService = {
   getLessonById: async (id) => {
       return await axiosClient.get(`/lessons/${id}`);
   },
+  getMyLessonChessProgress: async (lessonId) => {
+      return await axiosClient.get(`/lessons/${lessonId}/chess-progress`);
+  },
+  saveMyLessonChessProgress: async (lessonId, payload) => {
+      return await axiosClient.put(`/lessons/${lessonId}/chess-progress`, payload);
+  },
   uploadImage: async (file) => {
       const formData = new FormData();
       formData.append("image", file);

@@ -1,23 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import classService from "../../../../services/classService";
-import enrollmentService from "../../../../services/enrollmentService";
 
 const TeacherClassDetail = () => {
   const { classId } = useParams();
   const [classInfo, setClassInfo] = useState(null);
-  const [enrollments, setEnrollments] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [cls, enrs] = await Promise.all([
-          classService.getById(classId),
-          enrollmentService.getAll({ classId }),
-        ]);
+        const cls = await classService.getById(classId);
         setClassInfo(cls);
-        setEnrollments(Array.isArray(enrs) ? enrs : []);
+        setStudents(Array.isArray(cls?.studentIds) ? cls.studentIds : []);
       } catch (error) {
         console.error("Failed to load class detail", error);
       } finally {
@@ -49,17 +45,17 @@ const TeacherClassDetail = () => {
             </tr>
           </thead>
           <tbody>
-            {enrollments.map((e) => (
-              <tr key={e._id} className="border-t">
-                <td className="px-4 py-2">{e.studentId?.fullName || "N/A"}</td>
-                <td className="px-4 py-2">{e.studentId?.studentId || "N/A"}</td>
-                <td className="px-4 py-2">{e.status || "Active"}</td>
+            {students.map((student) => (
+              <tr key={student._id} className="border-t">
+                <td className="px-4 py-2">{student?.fullName || "N/A"}</td>
+                <td className="px-4 py-2">{student?.studentId || "N/A"}</td>
+                <td className="px-4 py-2">Đang học</td>
               </tr>
             ))}
-            {enrollments.length === 0 && (
+            {students.length === 0 && (
               <tr>
                 <td className="px-4 py-4 text-gray-500" colSpan={3}>
-                  Chưa có học viên ghi danh.
+                  Chưa có học viên trong lớp.
                 </td>
               </tr>
             )}

@@ -46,6 +46,16 @@ const userSchema = new mongoose.Schema(
       enum: ["Admin", "Parent", "Student", "Teacher"],
       default: "Parent",
     },
+    isOnline: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    lastSeenAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,

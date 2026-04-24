@@ -1,8 +1,8 @@
 const Attendance = require("../models/Attendance");
 const asyncHandler = require("../middleware/asyncHandler");
 const Class = require("../models/Class");
-const Schedule = require("../models/Schedule");
 const Student = require("../models/Student");
+const DAY_MAP = { CN: 0, T2: 1, T3: 2, T4: 3, T5: 4, T6: 5, T7: 6 };
 
 function parseDayAnchor(dateInput) {
   if (!dateInput) return new Date();
@@ -32,13 +32,31 @@ async function ensureTeacherOwnsClass(classId, reqUser) {
   return Boolean(ownClass);
 }
 
-const hasScheduleOnDate = async (studentId, dateInput) => {
-  const schedule = await Schedule.findOne({ studentId }).select("slots");
-  if (!schedule || !Array.isArray(schedule.slots) || schedule.slots.length === 0) {
-    return false;
-  }
+const buildScheduleSlotsFromLegacy = (schedule) => {
+  if (!schedule || typeof schedule !== "string") return [];
+  const timeMatch = schedule.match(/\((.*?)\)/);
+  if (!timeMatch?.[1]) return [];
+  const time = timeMatch[1].trim();
+  const hhmm = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  if (!hhmm.test(time)) return [];
+  const daysPart = schedule.split("(")[0] || "";
+  return daysPart
+    .split("/")
+    .map((d) => d.trim().toUpperCase())
+    .filter(Boolean)
+    .map((d) => DAY_MAP[d])
+    .filter((d) => Number.isInteger(d))
+    .map((day) => ({ day, time, duration: 90 }));
+};
+
+const hasClassScheduleOnDate = (classDoc, dateInput) => {
+  const scheduleSlots =
+    Array.isArray(classDoc?.scheduleSlots) && classDoc.scheduleSlots.length > 0
+      ? classDoc.scheduleSlots
+      : buildScheduleSlotsFromLegacy(classDoc?.schedule);
+  if (!scheduleSlots.length) return false;
   const dayVal = parseDayAnchor(dateInput).getDay(); // 0..6
-  return schedule.slots.some((slot) => Number(slot?.day) === Number(dayVal));
+  return scheduleSlots.some((slot) => Number(slot?.day) === Number(dayVal));
 };
 
 exports.listAttendance = asyncHandler(async (req, res) => {
@@ -85,7 +103,17 @@ exports.markAttendance = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Học viên không tồn tại" });
   }
 
-  const hasSchedule = await hasScheduleOnDate(studentId, date);
+  const classDoc = await Class.findById(classId).select("studentIds scheduleSlots schedule");
+  if (!classDoc) {
+    return res.status(404).json({ message: "Lớp học không tồn tại" });
+  }
+  const studentInClass = (classDoc.studentIds || []).some(
+    (id) => String(id) === String(studentId),
+  );
+  if (!studentInClass) {
+    return res.status(400).json({ message: "Học viên không thuộc lớp học này" });
+  }
+  const hasSchedule = hasClassScheduleOnDate(classDoc, date);
   if (!hasSchedule) {
     return res
       .status(400)

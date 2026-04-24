@@ -177,3 +177,57 @@ exports.getTeacherById = asyncHandler(async (req, res) => {
     classCount: classes.length,
   });
 });
+
+exports.getOnlineUsers = asyncHandler(async (_req, res) => {
+  const onlineThresholdMinutes = Number(process.env.ONLINE_USER_THRESHOLD_MINUTES || 5);
+  const threshold = new Date(Date.now() - onlineThresholdMinutes * 60 * 1000);
+
+  const users = await User.find({
+    role: { $in: ["Admin", "Teacher", "Parent", "Student"] },
+    isOnline: true,
+    lastSeenAt: { $gte: threshold },
+  })
+    .select("_id username fullName role avatarUrl lastSeenAt isOnline")
+    .sort({ lastSeenAt: -1 })
+    .lean();
+
+  res.json({
+    totalOnline: users.length,
+    thresholdMinutes: onlineThresholdMinutes,
+    users: users.map((user) => ({
+      ...user,
+      displayName: user.fullName || user.username || "Unknown",
+    })),
+  });
+});
+
+exports.getUserActivityStatuses = asyncHandler(async (_req, res) => {
+  const onlineThresholdMinutes = Number(process.env.ONLINE_USER_THRESHOLD_MINUTES || 5);
+  const thresholdMs = onlineThresholdMinutes * 60 * 1000;
+  const nowMs = Date.now();
+
+  const users = await User.find({
+    role: { $in: ["Admin", "Teacher", "Parent", "Student"] },
+  })
+    .select("_id username fullName role avatarUrl lastSeenAt isOnline")
+    .sort({ lastSeenAt: -1, createdAt: -1 })
+    .lean();
+
+  const activityUsers = users.map((user) => {
+    const lastSeenMs = user?.lastSeenAt ? new Date(user.lastSeenAt).getTime() : 0;
+    const isActive = Boolean(user.isOnline) && lastSeenMs > 0 && nowMs - lastSeenMs <= thresholdMs;
+    return {
+      ...user,
+      displayName: user.fullName || user.username || "Unknown",
+      isActive,
+    };
+  });
+
+  const onlineCount = activityUsers.filter((u) => u.isActive).length;
+  res.json({
+    thresholdMinutes: onlineThresholdMinutes,
+    totalUsers: activityUsers.length,
+    totalOnline: onlineCount,
+    users: activityUsers,
+  });
+});

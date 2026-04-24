@@ -11,7 +11,9 @@ router.get("/payroll/summary", payrollController.getPayrollSummary);
 router.get("/payroll/payslip", payrollController.exportPayslip);
 router.get("/payroll/:teacherId", payrollController.getAdminPayrollByTeacher);
 router.get("/payroll", payrollController.getAdminPayroll);
+router.post("/payroll/session", payrollController.createAdminSession);
 router.patch("/payroll/session/:id/salary", payrollController.updateSessionSalary);
 router.delete("/payroll/session/:id/salary", payrollController.resetSessionSalary);
+router.delete("/payroll/session/:id", payrollController.deleteSession);
 
 module.exports = router;

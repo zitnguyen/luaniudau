@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import settingsService from "../../../services/settingsService";
+import notificationService from "../../../services/notificationService";
+import userService from "../../../services/userService";
 import { useSystemSettings } from "../../../context/SystemSettingsContext";
+
+const ROLE_OPTIONS = [
+  { value: "Teacher", label: "Giáo viên" },
+  { value: "Parent", label: "Phụ huynh" },
+  { value: "Student", label: "Học viên" },
+];
 
 const SystemSettings = () => {
   const { settings, loading, refreshSettings, setSettingsOptimistic } = useSystemSettings();
@@ -10,6 +18,14 @@ const SystemSettings = () => {
   const [logoUploading, setLogoUploading] = useState(false);
   const [qrUploading, setQrUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [notifyTitle, setNotifyTitle] = useState("");
+  const [notifyContent, setNotifyContent] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState(["Teacher", "Parent", "Student"]);
+  const [recipientMode, setRecipientMode] = useState("allByRole");
+  const [users, setUsers] = useState([]);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [sendingNotification, setSendingNotification] = useState(false);
 
   useEffect(() => {
     setFormData(settings);
@@ -18,6 +34,10 @@ const SystemSettings = () => {
   const previewLogo = useMemo(
     () => formData.logoUrl || settings.logoUrl,
     [formData.logoUrl, settings.logoUrl],
+  );
+  const roleLabelMap = useMemo(
+    () => Object.fromEntries(ROLE_OPTIONS.map((item) => [item.value, item.label])),
+    [],
   );
 
   const handleChange = (event) => {
@@ -88,6 +108,80 @@ const SystemSettings = () => {
       event.target.value = "";
     }
   };
+
+  const handleSendParentNotification = async (event) => {
+    event.preventDefault();
+    if (!notifyTitle.trim() || !notifyContent.trim()) {
+      toast.error("Vui lòng nhập tiêu đề và nội dung thông báo");
+      return;
+    }
+    try {
+      setSendingNotification(true);
+      if (selectedRoles.length === 0) {
+        toast.error("Vui lòng chọn ít nhất một nhóm người nhận");
+        return;
+      }
+      if (recipientMode === "selectedUsers" && selectedUserIds.length === 0) {
+        toast.error("Vui lòng chọn ít nhất một người nhận");
+        return;
+      }
+      const result = await notificationService.create({
+        title: notifyTitle.trim(),
+        content: notifyContent.trim(),
+        targetRoles: selectedRoles,
+        userIds: recipientMode === "selectedUsers" ? selectedUserIds : [],
+      });
+      toast.success(`Đã gửi tới ${Number(result?.recipientsCount || 0)} người dùng`);
+      setNotifyTitle("");
+      setNotifyContent("");
+      setSelectedUserIds([]);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Gửi thông báo thất bại");
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
+  const toggleRole = (role) => {
+    setSelectedRoles((prev) =>
+      prev.includes(role) ? prev.filter((item) => item !== role) : [...prev, role],
+    );
+  };
+
+  const toggleUser = (userId) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(userId) ? prev.filter((item) => item !== userId) : [...prev, userId],
+    );
+  };
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (selectedRoles.length === 0) {
+        setUsers([]);
+        setSelectedUserIds([]);
+        return;
+      }
+      try {
+        setLoadingUsers(true);
+        const groups = await Promise.all(
+          selectedRoles.map((role) => userService.getAll({ role })),
+        );
+        const merged = groups.flatMap((group) => (Array.isArray(group) ? group : []));
+        const uniqueUsers = Array.from(
+          new Map(merged.map((user) => [String(user._id), user])).values(),
+        );
+        setUsers(uniqueUsers);
+        setSelectedUserIds((prev) =>
+          prev.filter((id) => uniqueUsers.some((user) => String(user._id) === String(id))),
+        );
+      } catch {
+        setUsers([]);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+    loadUsers();
+  }, [selectedRoles]);
 
   if (loading) {
     return (
@@ -205,6 +299,126 @@ const SystemSettings = () => {
         >
           {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           {submitting ? "Đang lưu..." : "Lưu cấu hình"}
+        </button>
+      </form>
+
+      <form
+        onSubmit={handleSendParentNotification}
+        className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4"
+      >
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Gửi thông báo người dùng</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Admin có thể gửi đến tất cả user theo role hoặc chọn từng user cụ thể.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label>
+          <input
+            type="text"
+            value={notifyTitle}
+            onChange={(event) => setNotifyTitle(event.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2"
+            placeholder="Ví dụ: Nhắc lịch học tuần này"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nội dung</label>
+          <textarea
+            rows={4}
+            value={notifyContent}
+            onChange={(event) => setNotifyContent(event.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2"
+            placeholder="Nhập nội dung thông báo..."
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Nhóm người nhận</label>
+          <div className="flex flex-wrap gap-3">
+            {ROLE_OPTIONS.map((role) => (
+              <label
+                key={role.value}
+                className="inline-flex items-center gap-2 text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedRoles.includes(role.value)}
+                  onChange={() => toggleRole(role.value)}
+                />
+                {role.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Chế độ chọn người nhận
+          </label>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                checked={recipientMode === "allByRole"}
+                onChange={() => setRecipientMode("allByRole")}
+              />
+              Gửi tất cả user theo role đã chọn
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                checked={recipientMode === "selectedUsers"}
+                onChange={() => setRecipientMode("selectedUsers")}
+              />
+              Chọn user cụ thể
+            </label>
+          </div>
+        </div>
+
+        {recipientMode === "selectedUsers" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Danh sách người nhận
+            </label>
+            <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-2">
+              {loadingUsers ? (
+                <div className="text-sm text-gray-500">Đang tải user...</div>
+              ) : users.length === 0 ? (
+                <div className="text-sm text-gray-500">Không có user phù hợp role đã chọn.</div>
+              ) : (
+                users.map((user) => (
+                  <label
+                    key={user._id}
+                    className="flex items-center gap-2 text-sm text-gray-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedUserIds.includes(user._id)}
+                      onChange={() => toggleUser(user._id)}
+                    />
+                    <span className="font-medium">
+                      {user.fullName || user.username || "N/A"}
+                    </span>
+                    <span className="text-gray-400">
+                      ({roleLabelMap[user.role] || user.role})
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={sendingNotification}
+          className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg disabled:opacity-70"
+        >
+          {sendingNotification ? <Loader2 size={16} className="animate-spin" /> : null}
+          {sendingNotification ? "Đang gửi..." : "Gửi thông báo"}
         </button>
       </form>
     </div>

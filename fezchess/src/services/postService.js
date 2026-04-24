@@ -33,7 +33,16 @@ const postService = {
 
   deletePost: async (id) => {
     return await axiosClient.delete(`/posts/${id}`);
-  }
+  },
+
+  uploadImage: async (file) => {
+    const formData = new FormData();
+    formData.append("media", file);
+    const data = await axiosClient.post("/upload/public-cms-media", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data?.url || "";
+  },
 };
 
 export default postService;

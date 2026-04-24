@@ -1,13 +1,34 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, LogOut, Bell } from 'lucide-react';
+import { Home, Calendar, LogOut, Bell, MessageCircle } from 'lucide-react';
 import authService from '../../../services/authService';
+import chatService from '../../../services/chatService';
 
 const ParentSidebar = () => {
+    const [unreadCount, setUnreadCount] = React.useState(0);
+    React.useEffect(() => {
+        let mounted = true;
+        const loadUnread = async () => {
+            try {
+                const data = await chatService.getUnreadSummary();
+                if (!mounted) return;
+                setUnreadCount(Number(data?.totalUnread || 0));
+            } catch {
+                if (mounted) setUnreadCount(0);
+            }
+        };
+        loadUnread();
+        const timer = window.setInterval(loadUnread, 10000);
+        return () => {
+            mounted = false;
+            window.clearInterval(timer);
+        };
+    }, []);
     const navItems = [
         { path: '/parent/dashboard', label: 'Tổng quan', icon: <Home size={20} /> },
         { path: '/parent/schedule', label: 'Lịch học con', icon: <Calendar size={20} /> },
-        { path: '/parent/notifications', label: 'Notifications', icon: <Bell size={20} /> },
+        { path: '/parent/notifications', label: 'Thông báo', icon: <Bell size={20} /> },
+        { path: '/parent/chat', label: 'Chat với Admin', icon: <MessageCircle size={20} /> },
     ];
 
     const handleLogout = () => {
@@ -36,6 +57,11 @@ const ParentSidebar = () => {
                     >
                         {item.icon}
                         <span>{item.label}</span>
+                        {item.path === '/parent/chat' && unreadCount > 0 && (
+                          <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-red-500 text-white min-w-[20px] text-center">
+                            +{unreadCount}
+                          </span>
+                        )}
                     </NavLink>
                 ))}
             </nav>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosClient from '../../../api/axiosClient';
-import { Save, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { Save, ArrowLeft, ImagePlus, Loader2 } from 'lucide-react';
+import postService from '../../../services/postService';
 
 const PostForm = () => {
     const { id } = useParams();
@@ -9,12 +10,14 @@ const PostForm = () => {
     const isEditMode = !!id;
 
     const [loading, setLoading] = useState(false);
+    const [uploadingImages, setUploadingImages] = useState(false);
     const [formData, setFormData] = useState({
         title: '',
         slug: '',
         summary: '',
         content: '',
         thumbnail: '',
+        images: [],
         category: 'News',
         isPublished: false
     });
@@ -34,6 +37,7 @@ const PostForm = () => {
                 summary: data.summary || '',
                 content: data.content,
                 thumbnail: data.thumbnail || '',
+                images: Array.isArray(data.images) ? data.images : (data.thumbnail ? [data.thumbnail] : []),
                 category: data.category || 'News',
                 isPublished: data.isPublished
             });
@@ -67,11 +71,19 @@ const PostForm = () => {
         setLoading(true);
 
         try {
+            const normalizedImages = Array.isArray(formData.images)
+                ? formData.images.map((url) => String(url || "").trim()).filter(Boolean)
+                : [];
+            const payload = {
+                ...formData,
+                images: normalizedImages,
+                thumbnail: formData.thumbnail || normalizedImages[0] || '',
+            };
             if (isEditMode) {
-                await axiosClient.put(`/posts/${id}`, formData);
+                await axiosClient.put(`/posts/${id}`, payload);
                 alert("Cập nhật thành công!");
             } else {
-                await axiosClient.post('/posts', formData);
+                await axiosClient.post('/posts', payload);
                 alert("Tạo bài viết mới thành công!");
             }
             navigate('/cms/posts');
@@ -80,6 +92,58 @@ const PostForm = () => {
             alert("Lỗi khi lưu bài viết: " + (error.response?.data?.message || error.message));
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePickThumbnail = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+            setUploadingImages(true);
+            const uploadedUrl = await postService.uploadImage(file);
+            if (!uploadedUrl) throw new Error("Không lấy được URL ảnh");
+            setFormData((prev) => ({
+                ...prev,
+                thumbnail: uploadedUrl,
+                images: Array.isArray(prev.images) && prev.images.length > 0
+                    ? [uploadedUrl, ...prev.images.filter((img) => img !== uploadedUrl)]
+                    : [uploadedUrl],
+            }));
+        } catch (error) {
+            alert(error?.response?.data?.message || error.message || "Upload ảnh thất bại.");
+        } finally {
+            setUploadingImages(false);
+            event.target.value = "";
+        }
+    };
+
+    const handlePickGalleryImages = async (event) => {
+        const files = Array.from(event.target.files || []);
+        if (files.length === 0) return;
+        try {
+            setUploadingImages(true);
+            const uploadedUrls = [];
+            for (const file of files) {
+                // eslint-disable-next-line no-await-in-loop
+                const uploadedUrl = await postService.uploadImage(file);
+                if (uploadedUrl) uploadedUrls.push(uploadedUrl);
+            }
+            if (uploadedUrls.length > 0) {
+                setFormData((prev) => {
+                    const current = Array.isArray(prev.images) ? prev.images : [];
+                    const merged = [...current, ...uploadedUrls];
+                    return {
+                        ...prev,
+                        images: merged,
+                        thumbnail: prev.thumbnail || merged[0] || '',
+                    };
+                });
+            }
+        } catch (error) {
+            alert(error?.response?.data?.message || error.message || "Upload ảnh thất bại.");
+        } finally {
+            setUploadingImages(false);
+            event.target.value = "";
         }
     };
 
@@ -184,6 +248,24 @@ const PostForm = () => {
                          
                          <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh đại diện (URL)</label>
+                            <div className="mb-2">
+                                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+                                    {uploadingImages ? (
+                                        <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                        <ImagePlus size={16} />
+                                    )}
+                                    <span className="text-sm">
+                                        {uploadingImages ? "Đang upload..." : "Tải ảnh đại diện từ máy"}
+                                    </span>
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg"
+                                        className="hidden"
+                                        onChange={handlePickThumbnail}
+                                    />
+                                </label>
+                            </div>
                             <div className="flex gap-2">
                                 <input
                                     type="text"
@@ -198,6 +280,65 @@ const PostForm = () => {
                                     <img src={formData.thumbnail} alt="Preview" className="max-h-32 mx-auto rounded" />
                                 </div>
                             )}
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Danh sách ảnh (nhiều URL)</label>
+                            <div className="mb-2">
+                                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+                                    {uploadingImages ? (
+                                        <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                        <ImagePlus size={16} />
+                                    )}
+                                    <span className="text-sm">
+                                        {uploadingImages ? "Đang upload..." : "Tải nhiều ảnh từ máy"}
+                                    </span>
+                                    <input
+                                        type="file"
+                                        multiple
+                                        accept="image/png,image/jpeg"
+                                        className="hidden"
+                                        onChange={handlePickGalleryImages}
+                                    />
+                                </label>
+                            </div>
+                            <div className="space-y-2">
+                                {(formData.images || []).map((img, idx) => (
+                                    <div key={`img-${idx}`} className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="flex-1 p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary text-sm"
+                                            placeholder="https://..."
+                                            value={img}
+                                            onChange={(e) => {
+                                                const nextImages = [...(formData.images || [])];
+                                                nextImages[idx] = e.target.value;
+                                                setFormData({ ...formData, images: nextImages });
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg"
+                                            onClick={() => {
+                                                const nextImages = (formData.images || []).filter((_, i) => i !== idx);
+                                                setFormData({ ...formData, images: nextImages });
+                                            }}
+                                        >
+                                            Xóa
+                                        </button>
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg"
+                                    onClick={() =>
+                                        setFormData({ ...formData, images: [...(formData.images || []), ""] })
+                                    }
+                                >
+                                    + Thêm ảnh
+                                </button>
+                            </div>
                         </div>
 
                         <div>

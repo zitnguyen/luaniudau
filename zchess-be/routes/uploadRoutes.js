@@ -95,6 +95,17 @@ const courseImageUpload = multer({
     cb(null, true);
   },
 });
+const chatImageUpload = multer({
+  storage: heroMediaStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!allowedMimes.has(file.mimetype)) {
+      cb(new Error("Chỉ hỗ trợ file JPG/PNG"));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 router.post(
   "/avatar",
@@ -261,6 +272,31 @@ router.post(
     const baseUrl = `${req.protocol}://${req.get("host")}`;
     const mediaType = req.file.mimetype.startsWith("video/") ? "video" : "image";
     return res.json({ url: `${baseUrl}${relativeUrl}`, mediaType });
+  },
+);
+
+router.post(
+  "/chat-image",
+  protect,
+  authorize("Admin", "Teacher", "Parent", "Student"),
+  (req, res, next) => {
+    chatImageUpload.single("image")(req, res, (err) => {
+      if (err) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "Kích thước ảnh tối đa 5MB" });
+        }
+        return res.status(400).json({ message: err.message || "Upload ảnh chat thất bại" });
+      }
+      next();
+    });
+  },
+  (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "Vui lòng chọn ảnh" });
+    }
+    const relativeUrl = `/uploads/hero/${req.file.filename}`;
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    return res.json({ url: `${baseUrl}${relativeUrl}` });
   },
 );
 

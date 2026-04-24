@@ -9,5 +9,6 @@ router.post("/", inquiryController.createInquiry);
 // Protected Admin (Read/Update)
 router.get("/", protect, authorize("Admin"), inquiryController.getInquiries);
 router.put("/:id", protect, authorize("Admin"), inquiryController.updateInquiry);
+router.delete("/:id", protect, authorize("Admin"), inquiryController.deleteInquiry);
 
 module.exports = router;

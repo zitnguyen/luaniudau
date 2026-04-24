@@ -37,7 +37,7 @@ const AdminHeader = () => {
 
     const fetchUnreadCount = async () => {
       try {
-        const data = await notificationService.getMine();
+        const data = await notificationService.getMine({ force: true });
         if (!isMounted) return;
 
         const currentUnread = Number(data?.unreadCount || 0);
@@ -91,13 +91,13 @@ const AdminHeader = () => {
       const status = await fetchUnreadCount();
       const role = getCurrentRole();
       const isForeground = document.visibilityState === 'visible' && document.hasFocus();
-      const shouldPollSlowly = !isForeground || role === 'admin';
+      const shouldPollSlowly = !isForeground;
       if (status === 429) {
         schedule(60000);
       } else if (shouldPollSlowly) {
-        schedule(30000);
+        schedule(20000);
       } else {
-        schedule(12000);
+        schedule(8000);
       }
     };
 
@@ -119,7 +119,7 @@ const AdminHeader = () => {
 
   const getNotificationPath = () => {
     const role = String(currentUser?.role || '').toLowerCase();
-    if (role === 'admin') return '/admin/notifications/new';
+    if (role === 'admin') return '/admin/notifications';
     if (role === 'teacher') return '/teacher/notifications';
     if (role === 'parent') return '/parent/notifications';
     if (role === 'student') return '/student/notifications';

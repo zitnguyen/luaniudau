@@ -19,6 +19,18 @@ router.get("/:id", classController.getClassById);
 // Admin Only
 router.post("/", protect, authorize("Admin"), classController.createClass);
 router.put("/:id", protect, authorize("Admin"), classController.updateClass);
+router.post(
+  "/:id/students",
+  protect,
+  authorize("Admin"),
+  classController.addStudentToClass,
+);
+router.delete(
+  "/:id/students/:studentId",
+  protect,
+  authorize("Admin"),
+  classController.removeStudentFromClass,
+);
 router.delete("/:id", protect, authorize("Admin"), classController.deleteClass);
 
 module.exports = router;

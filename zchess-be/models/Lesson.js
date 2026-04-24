@@ -6,10 +6,19 @@ const lessonSchema = new mongoose.Schema({
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true }, // Denormalized for easier queries
   type: { 
     type: String, 
-    enum: ["video", "text", "quiz"], 
+    enum: ["video", "text", "quiz", "chess"], 
     default: "video" 
   },
   content: { type: String }, // Video URL or text content
+  chessMode: {
+    type: String,
+    enum: ["external", "internal"],
+    default: "internal",
+  },
+  chessPlatform: { type: String, trim: true, default: "" },
+  initialFen: { type: String, trim: true, default: "" },
+  initialPgn: { type: String, trim: true, default: "" },
+  initialMoves: [{ type: String, trim: true }],
   duration: { type: Number, default: 0 },
   isFree: { type: Boolean, default: false }, 
   order: { type: Number, default: 0 },

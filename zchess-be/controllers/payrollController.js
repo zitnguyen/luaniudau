@@ -93,6 +93,56 @@ exports.createTeacherSession = asyncHandler(async (req, res) => {
   return res.status(201).json(toTeacherSessionDto(populated));
 });
 
+exports.createAdminSession = asyncHandler(async (req, res) => {
+  const { teacherId, classId, date, startTime, endTime, note = "", salary } = req.body || {};
+  if (!teacherId || !classId || !date || !startTime || !endTime) {
+    return res.status(400).json({ message: "Thiếu teacherId, classId, date, startTime hoặc endTime" });
+  }
+
+  const teacher = await User.findOne({ _id: teacherId, role: "Teacher" }).select("_id");
+  if (!teacher) {
+    return res.status(404).json({ message: "Không tìm thấy giáo viên" });
+  }
+  const classDoc = await Class.findById(classId).select("_id teacherId");
+  if (!classDoc) {
+    return res.status(404).json({ message: "Không tìm thấy lớp học" });
+  }
+  if (String(classDoc.teacherId) !== String(teacherId)) {
+    return res.status(400).json({ message: "Lớp học không thuộc giáo viên đã chọn" });
+  }
+
+  const durationHours = computeDurationHours(startTime, endTime);
+  if (!durationHours || durationHours <= 0) {
+    return res.status(400).json({ message: "startTime / endTime không hợp lệ" });
+  }
+
+  const normalizedSalary =
+    salary === undefined || salary === null || salary === ""
+      ? null
+      : Number(salary);
+  if (normalizedSalary !== null && (!Number.isFinite(normalizedSalary) || normalizedSalary < 0)) {
+    return res.status(400).json({ message: "Salary không hợp lệ" });
+  }
+
+  const created = await TeachingLog.create({
+    classId,
+    teacherId,
+    date: new Date(date),
+    startTime,
+    endTime,
+    durationHours,
+    note,
+    salary: normalizedSalary,
+    status: normalizedSalary == null ? "Pending" : "Confirmed",
+    createdBy: req.user._id,
+  });
+
+  const populated = await TeachingLog.findById(created._id)
+    .populate("classId", "className schedule")
+    .populate("teacherId", "fullName username");
+  return res.status(201).json(populated);
+});
+
 exports.getTeacherSessions = asyncHandler(async (req, res) => {
   const sessions = await TeachingLog.find({ teacherId: req.user._id })
     .populate("classId", "className schedule")
@@ -191,6 +241,15 @@ exports.updateSessionSalary = asyncHandler(async (req, res) => {
     .populate("teacherId", "fullName username");
 
   return res.json(populated);
+});
+
+exports.deleteSession = asyncHandler(async (req, res) => {
+  const sessionId = req.params.id;
+  const session = await TeachingLog.findByIdAndDelete(sessionId);
+  if (!session) {
+    return res.status(404).json({ message: "Không tìm thấy ca dạy" });
+  }
+  return res.json({ message: "Đã xóa ca dạy", id: sessionId });
 });
 
 exports.resetSessionSalary = asyncHandler(async (req, res) => {

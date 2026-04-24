@@ -28,6 +28,12 @@ const payrollService = {
   getAdminPayrollByTeacher: async (teacherId) => {
     return axiosClient.get(`/admin/payroll/${teacherId}`);
   },
+  createAdminSession: async (payload) => {
+    return axiosClient.post("/admin/payroll/session", payload);
+  },
+  deleteSession: async (sessionId) => {
+    return axiosClient.delete(`/admin/payroll/session/${sessionId}`);
+  },
   updateSessionSalary: async (sessionId, salary) => {
     return axiosClient.patch(`/admin/payroll/session/${sessionId}/salary`, { salary });
   },

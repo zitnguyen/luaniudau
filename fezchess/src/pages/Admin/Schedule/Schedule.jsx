@@ -1,34 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calculator, Calendar as CalendarIcon, Clock, Users, Loader2 } from 'lucide-react';
 import scheduleService from '../../../services/scheduleService';
-import { getSkillLevelLabel } from '../../../utils/studentLevel';
 
 const Schedule = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [students, setStudents] = useState([]);
+    const [classSchedules, setClassSchedules] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
-        const fetchStudents = async () => {
+        const fetchSchedules = async () => {
             try {
                 setLoading(true);
                 setError('');
                 const schedules = await scheduleService.getAll();
-                const merged = schedules
-                    .filter((record) => record?.studentId && !record.studentId.isDeleted)
-                    .map((record) => ({
-                        ...record.studentId,
-                        _id: record.studentId._id,
-                        schedule: {
-                            _id: record._id,
-                            scheduleId: record.scheduleId,
-                            slots: record.slots || [],
-                            startDate: record.startDate,
-                            room: record.room,
-                        },
-                    }));
-                setStudents(merged);
+                setClassSchedules(Array.isArray(schedules) ? schedules : []);
             } catch (error) {
                 console.error("Failed to fetch students", error);
                 setError(error?.response?.data?.message || "Không thể tải dữ liệu lịch học");
@@ -36,7 +22,7 @@ const Schedule = () => {
                 setLoading(false);
             }
         };
-        fetchStudents();
+        fetchSchedules();
     }, []);
 
     const normalizeDayValue = (day) => {
@@ -77,45 +63,28 @@ const Schedule = () => {
     const getEventsForCell = (day, hour) => {
         const currentDayVal = day.getDay(); // 0-6
 
-        return students.filter(student => {
-            if (!student.schedule) return false;
-            
-            // Handle "slots" format (new)
-            if (student.schedule.slots && student.schedule.slots.length > 0) {
-                return student.schedule.slots.some(slot => {
+        return classSchedules.filter((item) => {
+            if (!Array.isArray(item?.scheduleSlots)) return false;
+            return item.scheduleSlots.some((slot) => {
                     const slotDay = normalizeDayValue(slot.day);
                     if (slotDay === null || slotDay !== currentDayVal) return false;
                     const [h] = slot.time.split(':').map(Number);
                     return h === hour; 
                 });
-            }
-            
-            // Handle "days/time" format (legacy)
-            const days = student.schedule.days || [];
-            if (!days.includes(currentDayVal)) return false;
-            const time = student.schedule.time;
-            if (!time) return false;
-            const [h] = time.split(':').map(Number);
-            return h === hour;
         });
     };
 
     // Calculate active hours to display
     const getActiveHours = () => {
         const activeHoursSet = new Set();
-        students.forEach(s => {
-            if (s.schedule) {
-                 if (s.schedule.slots && s.schedule.slots.length > 0) {
-                    s.schedule.slots.forEach(slot => {
+        classSchedules.forEach((item) => {
+            if (Array.isArray(item?.scheduleSlots)) {
+                    item.scheduleSlots.forEach(slot => {
                         if (slot.time) {
                             const [h] = slot.time.split(':').map(Number);
                             if (!isNaN(h)) activeHoursSet.add(h);
                         }
                     });
-                } else if (s.schedule.time) {
-                    const [h] = s.schedule.time.split(':').map(Number);
-                    if (!isNaN(h)) activeHoursSet.add(h);
-                }
             }
         });
         const hrs = Array.from(activeHoursSet).sort((a, b) => a - b);
@@ -268,28 +237,28 @@ const Schedule = () => {
                                         <div className="h-full w-0.5 bg-gray-100 mt-2 mb-[-1rem]"></div>
                                      </div>
                                      <div className="flex-1 space-y-3 pb-4">
-                                         {events.map(student => (
-                                             <div key={student._id} className="bg-white border text-sm border-l-4 border-l-primary/70 border-gray-200 rounded-lg p-3 shadow-sm">
+                                         {events.map(item => (
+                                             <div key={item.classId} className="bg-white border text-sm border-l-4 border-l-primary/70 border-gray-200 rounded-lg p-3 shadow-sm">
                                                  <div className="font-bold text-gray-800 text-base mb-1">
-                                                    {student.fullName}
+                                                    {item.className}
                                                  </div>
                                                  <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-2">
                                                      <div className="flex items-center gap-1">
                                                         <Users size={12} />
-                                                        <span>{getSkillLevelLabel(student.skillLevel)}</span>
+                                                        <span>{item.students?.length || 0} học viên</span>
                                                      </div>
                                                      <div className="flex items-center gap-1">
                                                         <Clock size={12} />
-                                                        <span>45 phút</span>
+                                                        <span>{item.room || "Học tại trung tâm"}</span>
                                                      </div>
                                                  </div>
-                                                 {student.teacherId && (
+                                                 {item.teacher && (
                                                      <div className="flex items-center gap-2 bg-blue-50 px-2 py-1.5 rounded-md w-fit">
                                                          <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] font-bold text-blue-600 shadow-sm">
                                                              GV
                                                          </div>
                                                          <span className="text-xs font-medium text-blue-700">
-                                                             {student.teacherId.fullName || student.teacherId.username}
+                                                             {item.teacher.fullName || item.teacher.username}
                                                          </span>
                                                      </div>
                                                  )}
@@ -378,27 +347,27 @@ const Schedule = () => {
                                                 >
                                                     {events.length > 0 ? (
                                                         <div className="flex flex-col gap-2 h-full">
-                                                            {events.map(student => (
-                                                                <div key={student._id} className="
+                                                            {events.map(item => (
+                                                                <div key={item.classId} className="
                                                                     bg-white border text-[13px] border-l-4 border-l-primary/70 border-gray-200 rounded-r-lg p-2.5 shadow-sm hover:shadow-md transition-all 
                                                                     group/card cursor-pointer hover:-translate-y-0.5
                                                                 ">
                                                                     <div className="font-bold text-gray-800 line-clamp-1 group-hover/card:text-primary transition-colors">
-                                                                        {student.fullName}
+                                                                        {item.className}
                                                                     </div>
                                                                     
                                                                     <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-500">
                                                                         <Users size={12} />
                                                                         <span className="truncate max-w-[80px]">
-                                                                            {getSkillLevelLabel(student.skillLevel)}
+                                                                            {item.students?.length || 0} học viên
                                                                         </span>
                                                                     </div>
 
-                                                                    {student.teacherId && (
+                                                                    {item.teacher && (
                                                                          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-blue-600/80 font-medium">
                                                                             <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                                                                             <span className="truncate">
-                                                                                GV: {student.teacherId.fullName || student.teacherId.username}
+                                                                                GV: {item.teacher.fullName || item.teacher.username}
                                                                             </span>
                                                                         </div>
                                                                     )}

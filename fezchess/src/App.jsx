@@ -67,6 +67,7 @@ import StudentProfile from "./pages/portal/Student/Profile/StudentProfile";
 import MyCourses from "./pages/portal/Student/MyCourses";
 import NotificationListPage from "./pages/shared/Notifications/NotificationListPage";
 import NotificationDetailPage from "./pages/shared/Notifications/NotificationDetailPage";
+import ChatPage from "./pages/shared/Chat/ChatPage";
 
 // Auth & Public
 import Login from "./pages/auth/Login/Login";
@@ -523,6 +524,26 @@ function App() {
               }
             />
             <Route
+              path="/admin/notifications"
+              element={
+                <ProtectedRoute allowedRoles={["Admin"]}>
+                  <MainLayout>
+                    <NotificationListPage basePath="/admin/notifications" />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/notifications/:id"
+              element={
+                <ProtectedRoute allowedRoles={["Admin"]}>
+                  <MainLayout>
+                    <NotificationDetailPage basePath="/admin/notifications" />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/notifications/new"
               element={
                 <ProtectedRoute allowedRoles={["Admin"]}>
@@ -538,6 +559,16 @@ function App() {
                 <ProtectedRoute allowedRoles={["Admin"]}>
                   <MainLayout>
                     <SystemSettings />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/chat"
+              element={
+                <ProtectedRoute allowedRoles={["Admin"]}>
+                  <MainLayout>
+                    <ChatPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -568,6 +599,7 @@ function App() {
                       <Route path="payroll" element={<TeachingLogList />} />
                       <Route path="assessments" element={<AssessmentList />} />
                       <Route path="settings" element={<TeacherSettings />} />
+                      <Route path="chat" element={<ChatPage />} />
                       <Route
                         path="notifications"
                         element={
@@ -583,7 +615,7 @@ function App() {
                       <Route
                         path="*"
                         element={
-                          <div className="p-10">Teacher Page Coming Soon</div>
+                          <div className="p-10">Trang giáo viên đang được cập nhật</div>
                         }
                       />
                     </Routes>
@@ -605,6 +637,7 @@ function App() {
                     <Routes>
                       <Route path="dashboard" element={<ParentDashboard />} />
                       <Route path="schedule" element={<ParentSchedule />} />
+                      <Route path="chat" element={<ChatPage />} />
                       <Route
                         path="notifications"
                         element={
@@ -620,7 +653,7 @@ function App() {
                       <Route
                         path="*"
                         element={
-                          <div className="p-10">Parent Page Coming Soon</div>
+                          <div className="p-10">Trang phụ huynh đang được cập nhật</div>
                         }
                       />
                     </Routes>
@@ -644,6 +677,7 @@ function App() {
                       <Route path="schedule" element={<StudentSchedule />} />
                       <Route path="profile" element={<StudentProfile />} />
                       <Route path="courses" element={<MyCourses />} />
+                      <Route path="chat" element={<ChatPage />} />
                       <Route
                         path="notifications"
                         element={
@@ -659,7 +693,7 @@ function App() {
                       <Route
                         path="*"
                         element={
-                          <div className="p-10">Student Page Coming Soon</div>
+                          <div className="p-10">Trang học viên đang được cập nhật</div>
                         }
                       />
                     </Routes>
@@ -670,7 +704,7 @@ function App() {
 
             <Route
               path="*"
-              element={<div className="p-20 text-center">Coming Soon</div>}
+              element={<div className="p-20 text-center">Trang đang được cập nhật</div>}
             />
             </Routes>
           </PublicCmsProvider>

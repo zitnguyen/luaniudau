@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import payrollService from "../../../services/payrollService";
+import classService from "../../../services/classService";
 
 const formatMoney = (value) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
@@ -20,6 +21,17 @@ const AdminPayroll = () => {
   const [filterMonth, setFilterMonth] = useState(String(now.getMonth() + 1));
   const [filterYear, setFilterYear] = useState(String(now.getFullYear()));
   const [exportingType, setExportingType] = useState("");
+  const [classes, setClasses] = useState([]);
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [sessionForm, setSessionForm] = useState({
+    teacherId: "",
+    classId: "",
+    date: "",
+    startTime: "",
+    endTime: "",
+    salary: "",
+    note: "",
+  });
 
   const loadTeachers = async () => {
     const [teacherRows, summaryData] = await Promise.all([
@@ -32,6 +44,11 @@ const AdminPayroll = () => {
     if (!selectedTeacherId && rows.length > 0) {
       setSelectedTeacherId(rows[0].teacher?._id || "");
     }
+  };
+
+  const loadClasses = async () => {
+    const rows = await classService.getAll();
+    setClasses(Array.isArray(rows) ? rows : []);
   };
 
   const loadTeacherDetail = async (teacherId) => {
@@ -47,9 +64,9 @@ const AdminPayroll = () => {
     try {
       setLoading(true);
       setError("");
-      await loadTeachers();
+      await Promise.all([loadTeachers(), loadClasses()]);
     } catch (e) {
-      setError("Không thể tải dữ liệu payroll.");
+      setError("Không thể tải dữ liệu bảng lương.");
     } finally {
       setLoading(false);
     }
@@ -61,7 +78,7 @@ const AdminPayroll = () => {
 
   useEffect(() => {
     loadTeacherDetail(selectedTeacherId).catch(() => {
-      setError("Không thể tải chi tiết payroll theo giáo viên.");
+      setError("Không thể tải chi tiết bảng lương theo giáo viên.");
     });
   }, [selectedTeacherId]);
 
@@ -71,6 +88,16 @@ const AdminPayroll = () => {
       teacherDetail?.teacher?.username ||
       "Giáo viên",
     [teacherDetail],
+  );
+
+  const availableClasses = useMemo(
+    () =>
+      classes.filter(
+        (item) =>
+          String(item.teacherId?._id || item.teacherId) ===
+          String(sessionForm.teacherId || selectedTeacherId),
+      ),
+    [classes, sessionForm.teacherId, selectedTeacherId],
   );
 
   const handleSalaryChange = async (sessionId, value) => {
@@ -159,16 +186,58 @@ const AdminPayroll = () => {
     }
   };
 
+  const handleCreateSession = async (e) => {
+    e.preventDefault();
+    try {
+      setCreatingSession(true);
+      setError("");
+      await payrollService.createAdminSession({
+        teacherId: sessionForm.teacherId || selectedTeacherId,
+        classId: sessionForm.classId,
+        date: sessionForm.date,
+        startTime: sessionForm.startTime,
+        endTime: sessionForm.endTime,
+        salary: sessionForm.salary === "" ? null : Number(sessionForm.salary),
+        note: sessionForm.note,
+      });
+      setSessionForm({
+        teacherId: selectedTeacherId || "",
+        classId: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+        salary: "",
+        note: "",
+      });
+      await Promise.all([loadTeacherDetail(selectedTeacherId), loadTeachers()]);
+    } catch (e2) {
+      setError(e2?.response?.data?.message || "Không thể tạo ca bảng lương.");
+    } finally {
+      setCreatingSession(false);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId) => {
+    if (!window.confirm("Bạn có chắc muốn xóa ca dạy này?")) return;
+    try {
+      setError("");
+      await payrollService.deleteSession(sessionId);
+      await Promise.all([loadTeacherDetail(selectedTeacherId), loadTeachers()]);
+    } catch (e) {
+      setError(e?.response?.data?.message || "Không thể xóa ca dạy.");
+    }
+  };
+
   if (loading) {
-    return <div className="p-6 text-gray-500">Đang tải payroll...</div>;
+    return <div className="p-6 text-gray-500">Đang tải bảng lương...</div>;
   }
 
   return (
     <div className="space-y-5">
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h1 className="text-2xl font-bold text-gray-900">Payroll quản lý giáo viên</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Bảng lương quản lý giáo viên</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Admin quản lý lương theo từng ca dạy. Salary chỉ được set tại trang này.
+          Admin quản lý lương theo từng ca dạy. Lương chỉ được thiết lập tại trang này.
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <div>
@@ -202,7 +271,7 @@ const AdminPayroll = () => {
             disabled={exportingType !== ""}
             className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
           >
-            {exportingType === "excel" ? "Đang xuất..." : "Export Excel"}
+            {exportingType === "excel" ? "Đang xuất..." : "Xuất Excel"}
           </button>
           <button
             type="button"
@@ -210,9 +279,67 @@ const AdminPayroll = () => {
             disabled={exportingType !== ""}
             className="px-4 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-60"
           >
-            {exportingType === "pdf" ? "Đang xuất..." : "Export PDF"}
+            {exportingType === "pdf" ? "Đang xuất..." : "Xuất PDF"}
           </button>
         </div>
+        <form className="mt-4 grid grid-cols-1 md:grid-cols-6 gap-2" onSubmit={handleCreateSession}>
+          <select
+            value={sessionForm.teacherId || selectedTeacherId}
+            onChange={(e) =>
+              setSessionForm((prev) => ({ ...prev, teacherId: e.target.value, classId: "" }))
+            }
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            required
+          >
+            <option value="">Chọn giáo viên</option>
+            {teachers.map((item) => (
+              <option key={item.teacher?._id} value={item.teacher?._id}>
+                {item.teacher?.fullName || item.teacher?.username}
+              </option>
+            ))}
+          </select>
+          <select
+            value={sessionForm.classId}
+            onChange={(e) => setSessionForm((prev) => ({ ...prev, classId: e.target.value }))}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            required
+          >
+            <option value="">Chọn lớp</option>
+            {availableClasses.map((item) => (
+              <option key={item._id} value={item._id}>
+                {item.className}
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={sessionForm.date}
+            onChange={(e) => setSessionForm((prev) => ({ ...prev, date: e.target.value }))}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            required
+          />
+          <input
+            type="time"
+            value={sessionForm.startTime}
+            onChange={(e) => setSessionForm((prev) => ({ ...prev, startTime: e.target.value }))}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            required
+          />
+          <input
+            type="time"
+            value={sessionForm.endTime}
+            onChange={(e) => setSessionForm((prev) => ({ ...prev, endTime: e.target.value }))}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            required
+          />
+          <button
+            type="submit"
+            disabled={creatingSession}
+            className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-60 text-sm"
+          >
+            {creatingSession ? "Đang thêm..." : "Thêm ca lương"}
+          </button>
+        </form>
       </div>
 
       {summary && (
@@ -301,7 +428,7 @@ const AdminPayroll = () => {
                     Giờ dạy
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                    Salary
+                    Lương
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">
                     Thao tác
@@ -355,7 +482,7 @@ const AdminPayroll = () => {
                               disabled={savingSessionId === session._id}
                               className="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-60"
                             >
-                              Save
+                              Lưu
                             </button>
                             <button
                               type="button"
@@ -373,7 +500,7 @@ const AdminPayroll = () => {
                             disabled={savingSessionId === session._id}
                             className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-60"
                           >
-                            Edit
+                            Sửa
                           </button>
                         )}
                         <button
@@ -382,7 +509,15 @@ const AdminPayroll = () => {
                           disabled={savingSessionId === session._id}
                           className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-60"
                         >
-                          Reset
+                          Đặt lại
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSession(session._id)}
+                          disabled={savingSessionId === session._id}
+                          className="px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-60"
+                        >
+                          Xóa
                         </button>
                       </div>
                     </td>

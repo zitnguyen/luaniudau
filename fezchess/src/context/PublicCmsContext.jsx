@@ -32,11 +32,16 @@ const PublicCmsContext = createContext({
   cms: defaultCms,
   loading: true,
   refreshCms: async () => {},
+  setCmsOptimistic: () => {},
 });
 
 export const PublicCmsProvider = ({ children }) => {
   const [cms, setCms] = useState(defaultCms);
   const [loading, setLoading] = useState(true);
+  const setCmsOptimistic = useCallback((updater) => {
+    setCms((prev) => (typeof updater === "function" ? updater(prev) : { ...prev, ...updater }));
+  }, []);
+
 
   const refreshCms = useCallback(async () => {
     try {
@@ -53,7 +58,10 @@ export const PublicCmsProvider = ({ children }) => {
     refreshCms();
   }, [refreshCms]);
 
-  const value = useMemo(() => ({ cms, loading, refreshCms }), [cms, loading, refreshCms]);
+  const value = useMemo(
+    () => ({ cms, loading, refreshCms, setCmsOptimistic }),
+    [cms, loading, refreshCms, setCmsOptimistic],
+  );
   return <PublicCmsContext.Provider value={value}>{children}</PublicCmsContext.Provider>;
 };
 

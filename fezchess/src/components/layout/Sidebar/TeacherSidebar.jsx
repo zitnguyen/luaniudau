@@ -9,13 +9,35 @@ import {
   LogOut,
   Settings,
   Bell,
+  MessageCircle,
 } from "lucide-react";
 import authService from "../../../services/authService";
 import SidebarHeader from "./SidebarHeader";
+import chatService from "../../../services/chatService";
 
 const TeacherSidebar = ({ isOpen, onClose }) => {
   const user = authService.getCurrentUser();
   const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const loadUnread = async () => {
+      try {
+        const data = await chatService.getUnreadSummary();
+        if (!mounted) return;
+        setUnreadCount(Number(data?.totalUnread || 0));
+      } catch {
+        if (mounted) setUnreadCount(0);
+      }
+    };
+    loadUnread();
+    const timer = window.setInterval(loadUnread, 10000);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const handleLogout = () => {
     authService.logout();
@@ -29,7 +51,8 @@ const TeacherSidebar = ({ isOpen, onClose }) => {
     { to: "/teacher/attendance", icon: ClipboardCheck, label: "Điểm danh" },
     { to: "/teacher/payroll", icon: Calendar, label: "Ca dạy" },
     { to: "/teacher/schedule", icon: BookOpen, label: "Lịch dạy" },
-    { to: "/teacher/notifications", icon: Bell, label: "Notifications" },
+    { to: "/teacher/notifications", icon: Bell, label: "Thông báo" },
+    { to: "/teacher/chat", icon: MessageCircle, label: "Chat với Admin" },
     { to: "/teacher/settings", icon: Settings, label: "Cài đặt" },
   ];
 
@@ -77,6 +100,11 @@ const TeacherSidebar = ({ isOpen, onClose }) => {
                     <item.icon size={20} className={iconClass(isActive)} />
                   </span>
                   <span className="truncate leading-none">{item.label}</span>
+                  {item.to === "/teacher/chat" && unreadCount > 0 && (
+                    <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-red-500 text-white min-w-[20px] text-center">
+                      +{unreadCount}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>

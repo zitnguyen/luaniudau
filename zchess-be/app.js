@@ -38,6 +38,8 @@ const uploadRoutes = require("./routes/uploadRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
 const testimonialRoutes = require("./routes/testimonialRoutes");
 const heroSettingRoutes = require("./routes/heroSettingRoutes");
+const lichessRoutes = require("./routes/lichessRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 const errorHandler = require("./middleware/errorMiddleware");
 const { apiLimiter } = require("./middleware/securityMiddleware");
@@ -101,6 +103,8 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/hero-settings", heroSettingRoutes);
+app.use("/api/lichess", lichessRoutes);
+app.use("/api/chat", chatRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

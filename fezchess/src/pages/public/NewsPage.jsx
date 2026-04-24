@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import postService from '../../services/postService';
 import { Calendar, User, ArrowRight } from 'lucide-react';
 import { usePublicCms } from '../../context/PublicCmsContext';
+import PublicPageQuickEditor from "../../components/cms/PublicPageQuickEditor";
 
 const NewsPage = () => {
     const [posts, setPosts] = useState([]);
@@ -33,7 +34,7 @@ const NewsPage = () => {
     }, []);
 
     return (
-        <div className="bg-white">
+        <div className="bg-white" style={{ backgroundColor: page?.pageBackgroundColor || "#FFFFFF", fontFamily: page?.fontFamily && page.fontFamily !== "inherit" ? page.fontFamily : undefined }}>
             <div
               className="py-20"
               style={{
@@ -44,8 +45,8 @@ const NewsPage = () => {
               }}
             >
               <div className="container mx-auto px-4 text-center">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">{page?.title || "Tin Tức & Sự Kiện"}</h1>
-                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                <h1 className="text-4xl font-bold mb-4" style={{ color: page?.titleColor || "#111827", fontSize: page?.titleFontSize || undefined }}>{page?.title || "Tin Tức & Sự Kiện"}</h1>
+                <p className="text-lg max-w-2xl mx-auto" style={{ color: page?.descriptionColor || "#4B5563", fontSize: page?.descriptionFontSize || undefined }}>
                     {page?.description || "Cập nhật những thông tin mới nhất về các giải đấu, hoạt động của câu lạc bộ và kiến thức cờ vua bổ ích."}
                 </p>
               </div>
@@ -57,12 +58,14 @@ const NewsPage = () => {
                 <div className="text-center py-20">Đang tải tin tức...</div>
             ) : posts.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {posts.map((post) => (
+                    {posts.map((post) => {
+                        const previewImage = post.thumbnail || (Array.isArray(post.images) ? post.images[0] : "");
+                        return (
                         <div key={post._id} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-gray-100 dark:border-slate-700 flex flex-col h-full">
                             <div className="aspect-video bg-gray-100 dark:bg-slate-800 relative overflow-hidden">
-                                {post.thumbnail ? (
+                                {previewImage ? (
                                     <img 
-                                        src={post.thumbnail} 
+                                        src={previewImage}
                                         alt={post.title} 
                                         className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                                     />
@@ -79,11 +82,11 @@ const NewsPage = () => {
                             <div className="p-6 flex-1 flex flex-col">
                                 <div className="flex items-center text-xs text-gray-500 dark:text-slate-300 mb-3 space-x-4">
                                     <span className="flex items-center">
-                                        <Calendar className="w-4 h-4 mr-1" />
+                                        <Calendar className="w-4 h-4 mr-1" style={{ color: page?.iconColor || undefined }} />
                                         {new Date(post.createdAt).toLocaleDateString('vi-VN')}
                                     </span>
                                     <span className="flex items-center">
-                                        <User className="w-4 h-4 mr-1" />
+                                        <User className="w-4 h-4 mr-1" style={{ color: page?.iconColor || undefined }} />
                                         {post.author?.fullName || 'Admin'}
                                     </span>
                                 </div>
@@ -100,14 +103,16 @@ const NewsPage = () => {
                                 
                                 <Link 
                                     to={`/news/${post.slug || post._id}`}
-                                    className="inline-flex items-center font-semibold text-primary dark:text-blue-300 hover:text-primary/80 mt-auto group"
+                                    className="inline-flex items-center font-semibold dark:text-blue-300 hover:text-primary/80 mt-auto group"
+                                    style={{ color: page?.buttonColor || undefined }}
                                 >
                                     Xem chi tiết
-                                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" style={{ color: page?.iconColor || undefined }} />
                                 </Link>
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             ) : (
                 <div className="text-center py-20 bg-gray-50 rounded-2xl">
@@ -115,6 +120,18 @@ const NewsPage = () => {
                 </div>
             )}
             </div>
+            <PublicPageQuickEditor
+              title="Chỉnh giao diện Tin tức"
+              fields={[
+                { path: "newsPage.title", label: "Tiêu đề trang" },
+                { path: "newsPage.description", label: "Mô tả trang", type: "textarea" },
+                { path: "newsPage.buttonColor", label: "Màu nút/link", type: "color" },
+                { path: "newsPage.buttonTextColor", label: "Màu chữ nút", type: "color" },
+                { path: "newsPage.iconColor", label: "Màu icon", type: "color" },
+                { path: "newsPage.pageBackgroundColor", label: "Màu nền trang", type: "color" },
+                { path: "newsPage.titleColor", label: "Màu tiêu đề", type: "color" },
+              ]}
+            />
         </div>
     );
 };

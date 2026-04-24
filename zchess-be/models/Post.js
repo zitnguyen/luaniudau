@@ -6,6 +6,7 @@ const postSchema = new mongoose.Schema({
   content: { type: String, required: true },
   summary: { type: String, trim: true },
   thumbnail: { type: String },
+  images: [{ type: String, trim: true }],
   author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   category: { type: String, default: "General" },
   tags: [{ type: String }],

@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import classService from "../../../../services/classService";
 
 const DAY_LABELS = {
-  T2: "Thứ 2",
-  T3: "Thứ 3",
-  T4: "Thứ 4",
-  T5: "Thứ 5",
-  T6: "Thứ 6",
-  T7: "Thứ 7",
-  CN: "Chủ nhật",
+  0: "Chủ nhật",
+  1: "Thứ 2",
+  2: "Thứ 3",
+  3: "Thứ 4",
+  4: "Thứ 5",
+  5: "Thứ 6",
+  6: "Thứ 7",
 };
 
 const TeacherSchedule = () => {
@@ -32,17 +32,15 @@ const TeacherSchedule = () => {
   const scheduleRows = useMemo(
     () =>
       classes.map((c) => {
-        const schedule = c.schedule || "";
-        const days = Object.keys(DAY_LABELS)
-          .filter((d) => schedule.includes(d))
-          .map((d) => DAY_LABELS[d]);
-        const timeMatch = schedule.match(/\((.*?)\)/);
+        const slots = Array.isArray(c.scheduleSlots) ? c.scheduleSlots : [];
+        const days = [...new Set(slots.map((slot) => DAY_LABELS[String(slot.day)]).filter(Boolean))];
+        const times = [...new Set(slots.map((slot) => slot.time).filter(Boolean))];
         return {
           classId: c._id,
           className: c.className,
           days: days.join(", ") || "Chưa rõ",
-          time: timeMatch?.[1] || "Chưa rõ",
-          rawSchedule: schedule || "Chưa cập nhật",
+          time: times.join(", ") || "Chưa rõ",
+          rawSchedule: c.schedule || "Chưa cập nhật",
         };
       }),
     [classes],

@@ -10,5 +10,7 @@ router.delete("/:id", protect, authorize("Admin", "Teacher"), lessonController.d
 
 // Public/Protected (View)
 router.get("/:id", optionalProtect, lessonController.getLessonById); // Verify access logic inside controller
+router.get("/:id/chess-progress", protect, lessonController.getMyChessProgress);
+router.put("/:id/chess-progress", protect, lessonController.saveMyChessProgress);
 
 module.exports = router;

@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import studentService from '../../../services/studentService';
 import scheduleService from '../../../services/scheduleService';
 import { Calendar, Clock, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getSkillLevelLabel } from '../../../utils/studentLevel';
 
 const ParentSchedule = () => {
     const navigate = useNavigate();
-    const [students, setStudents] = useState([]);
+    const [classSchedules, setClassSchedules] = useState([]);
     const [loading, setLoading] = useState(true);
     const [weekOffset, setWeekOffset] = useState(0);
 
@@ -18,38 +16,14 @@ const ParentSchedule = () => {
              // Basic protection, though strict routing checks are better
              return;
         }
-        fetchMyChildren();
+        fetchSchedules();
     }, []);
 
-    const fetchMyChildren = async () => {
+    const fetchSchedules = async () => {
         try {
             setLoading(true);
-            const [children, schedules] = await Promise.all([
-                studentService.getByParentId(user._id || user.id),
-                scheduleService.getAll(),
-            ]);
-            const childList = Array.isArray(children) ? children : [];
-            const allSchedules = Array.isArray(schedules) ? schedules : [];
-            const scheduleByStudentId = new Map(
-                allSchedules
-                    .filter((record) => record?.studentId?._id)
-                    .map((record) => [
-                        String(record.studentId._id),
-                        {
-                            _id: record._id,
-                            scheduleId: record.scheduleId,
-                            slots: record.slots || [],
-                            startDate: record.startDate,
-                            room: record.room,
-                        },
-                    ])
-            );
-
-            const merged = childList.map((student) => ({
-                ...student,
-                schedule: scheduleByStudentId.get(String(student._id)) || null,
-            }));
-            setStudents(merged);
+            const schedules = await scheduleService.getAll();
+            setClassSchedules(Array.isArray(schedules) ? schedules : []);
         } catch (error) {
             console.error("Failed to fetch children", error);
         } finally {
@@ -80,42 +54,27 @@ const ParentSchedule = () => {
     const getEventsForCell = (day, hour) => {
         const currentDayVal = day.getDay();
         
-        return students.filter(student => {
-            if (!student.schedule) return false;
-            
-            // New Format: Slots
-            if (student.schedule.slots && student.schedule.slots.length > 0) {
-                return student.schedule.slots.some(slot => {
-                    if (slot.day !== currentDayVal) return false;
+        return classSchedules.filter(item => {
+            const slots = Array.isArray(item.scheduleSlots) ? item.scheduleSlots : [];
+            return slots.some(slot => {
+                    if (Number(slot.day) !== currentDayVal) return false;
                     const [h] = slot.time.split(':').map(Number);
                     return h === hour;
                 });
-            }
-            // Legacy Format
-            const days = student.schedule.days || [];
-            if (!days.includes(currentDayVal)) return false;
-            const time = student.schedule.time;
-            if (!time) return false;
-            const [h] = time.split(':').map(Number);
-            return h === hour;
         });
     };
 
     // Calculate Active Hours
     const activeHoursSet = new Set();
-    students.forEach(s => {
-        if (s.schedule) {
-            if (s.schedule.slots && s.schedule.slots.length > 0) {
-                s.schedule.slots.forEach(slot => {
-                    if (slot.time) {
-                        const [h] = slot.time.split(':').map(Number);
-                        if (!isNaN(h)) activeHoursSet.add(h);
-                    }
-                });
-            } else if (s.schedule.time) {
-                const [h] = s.schedule.time.split(':').map(Number);
-                if (!isNaN(h)) activeHoursSet.add(h);
-            }
+    classSchedules.forEach(item => {
+        const slots = Array.isArray(item.scheduleSlots) ? item.scheduleSlots : [];
+        if (slots.length > 0) {
+            slots.forEach(slot => {
+                if (slot.time) {
+                    const [h] = slot.time.split(':').map(Number);
+                    if (!isNaN(h)) activeHoursSet.add(h);
+                }
+            });
         }
     });
     
@@ -183,13 +142,15 @@ const ParentSchedule = () => {
                                         padding: '8px',
                                         background: events.length > 0 ? '#F0FDF4' : 'white'
                                     }}>
-                                        {events.map(student => (
-                                            <div key={student._id || student.id} style={{
+                                        {events.map(item => (
+                                            <div key={item.classId} style={{
                                                 background: 'white', border: '1px solid #000000', borderRadius: '4px',
                                                 padding: '8px', boxShadow: '2px 2px 0px #000000', marginBottom: '8px'
                                             }}>
-                                                <div style={{ fontWeight: 'bold', color: '#166534' }}>{student.fullName}</div>
-                                                <div style={{ fontSize: '12px', color: '#4B5563' }}>{getSkillLevelLabel(student.skillLevel)}</div>
+                                                <div style={{ fontWeight: 'bold', color: '#166534' }}>{item.className}</div>
+                                                <div style={{ fontSize: '12px', color: '#4B5563' }}>
+                                                    {item.students?.length || 0} học viên
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, FileText, Trash2, Download } from 'lucide-react';
-import enrollmentService from '../../../services/enrollmentService';
 import progressService from '../../../services/progressService';
 import authService from '../../../services/authService';
+import studentService from '../../../services/studentService';
+import classService from '../../../services/classService';
 
 const ProgressList = () => {
   const navigate = useNavigate();
   const user = authService.getCurrentUser();
   const isAdmin = user?.role === 'Admin';
-  const [enrollments, setEnrollments] = useState([]);
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -25,24 +26,46 @@ const ProgressList = () => {
   };
 
   useEffect(() => {
-    fetchEnrollments();
+    fetchRows();
   }, []);
 
-  const fetchEnrollments = async () => {
+  const fetchRows = async () => {
     try {
+      const [studentsData, classesData] = await Promise.all([
+        studentService.getAll(),
+        classService.getAll(),
+      ]);
+      const students = Array.isArray(studentsData) ? studentsData : [];
+      const classes = Array.isArray(classesData) ? classesData : [];
+      const classByStudentId = new Map();
+      classes.forEach((cls) => {
+        const studentIds = Array.isArray(cls.studentIds) ? cls.studentIds : [];
+        studentIds.forEach((student) => {
+          const sid = resolveEntityId(student);
+          if (!sid || classByStudentId.has(sid)) return;
+          classByStudentId.set(sid, cls);
+        });
+      });
 
-      const data = await enrollmentService.getAll();
-      setEnrollments(Array.isArray(data) ? data : []);
+      const merged = students.map((student) => {
+        const sid = resolveEntityId(student);
+        return {
+          _id: sid,
+          student,
+          classItem: classByStudentId.get(sid) || null,
+        };
+      });
+      setRows(merged);
     } catch (error) {
-      console.error("Error fetching enrollments:", error);
+      console.error("Error fetching progress rows:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredEnrollments = enrollments.filter(enrollment => 
-    getStudentDisplayName(enrollment.studentId).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (enrollment.classId?.className || "").toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRows = rows.filter((row) =>
+    getStudentDisplayName(row.student).toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (row.classItem?.className || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDelete = async (studentId, classId) => {
@@ -55,7 +78,7 @@ const ProgressList = () => {
 
               await progressService.remove(studentId, classId);
               alert("Đã xóa phiếu học tập thành công!");
-              // Refresh or just let them know (Progress deleted, but Enrollment remains)
+              fetchRows();
           } catch (error) {
               console.error("Error deleting:", error);
               alert("Lỗi khi xóa (hoặc phiếu chưa tồn tại)");
@@ -110,25 +133,25 @@ const ProgressList = () => {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr><td colSpan="4" className="text-center py-8 text-gray-500">Đang tải dữ liệu...</td></tr>
-              ) : filteredEnrollments.length > 0 ? (
-                filteredEnrollments.map((item) => (
+              ) : filteredRows.length > 0 ? (
+                filteredRows.map((item) => (
                   (() => {
-                    const studentId = resolveEntityId(item.studentId);
-                    const classId = resolveEntityId(item.classId);
+                    const studentId = resolveEntityId(item.student);
+                    const classId = resolveEntityId(item.classItem);
                     const hasValidIds = Boolean(studentId && classId);
                     return (
                   <tr key={item._id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      {getStudentDisplayName(item.studentId)}
+                      {getStudentDisplayName(item.student)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      {item.classId?.className || "N/A"}
+                      {item.classItem?.className || "Chưa có lớp"}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        item.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                        item.classItem ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                       }`}>
-                        {item.status === 'Active' ? 'Đang học' : item.status}
+                        {item.classItem ? 'Đang học' : 'Chưa xếp lớp'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -155,7 +178,7 @@ const ProgressList = () => {
                           handleExport(
                             studentId,
                             classId,
-                            getStudentDisplayName(item.studentId) || "HocVien",
+                            getStudentDisplayName(item.student) || "HocVien",
                           )
                         }
                         disabled={!hasValidIds}
@@ -190,7 +213,7 @@ const ProgressList = () => {
                   <td colSpan="4" className="text-center py-8 text-gray-500">
                     <div className="flex flex-col items-center gap-2">
                       <span>Chưa có học viên nào trong danh sách.</span>
-                      <span className="text-sm">Vui lòng vào menu <strong>Ghi danh</strong> để thêm học viên vào lớp học trước.</span>
+                      <span className="text-sm">Mỗi học viên sẽ có phiếu học tập riêng để theo dõi tiến độ.</span>
                     </div>
                   </td>
                 </tr>

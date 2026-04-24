@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import teacherService from "../../services/teacherService";
 import { useNavigate } from "react-router-dom";
 import { usePublicCms } from "../../context/PublicCmsContext";
+import PublicPageQuickEditor from "../../components/cms/PublicPageQuickEditor";
 
 const TeacherPage = () => {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ const TeacherPage = () => {
   }, []);
 
   return (
-    <div className="bg-white">
+    <div className="bg-white" style={{ backgroundColor: page?.pageBackgroundColor || "#FFFFFF", fontFamily: page?.fontFamily && page.fontFamily !== "inherit" ? page.fontFamily : undefined }}>
       <div
         className="py-20"
         style={{
@@ -40,10 +41,10 @@ const TeacherPage = () => {
         }}
       >
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold mb-4" style={{ color: page?.titleColor || "#111827", fontSize: page?.titleFontSize || undefined }}>
             {page?.title || "Đội Ngũ Giảng Viên"}
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl max-w-2xl mx-auto" style={{ color: page?.descriptionColor || "#4B5563", fontSize: page?.descriptionFontSize || undefined }}>
             {page?.description ||
               "Gặp gỡ những Kiện tướng, Huấn luyện viên tâm huyết và giàu kinh nghiệm của chúng tôi."}
           </p>
@@ -104,7 +105,11 @@ const TeacherPage = () => {
                 <button
                   onClick={() => navigate(`/teachers/${teacher._id}`)}
                   className="mt-4 w-full px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 text-sm font-medium"
-                  style={{ borderRadius: theme?.buttonRadius || undefined }}
+                  style={{
+                    borderRadius: theme?.buttonRadius || undefined,
+                    backgroundColor: page?.buttonColor || undefined,
+                    color: page?.buttonTextColor || undefined,
+                  }}
                 >
                   Xem chi tiết
                 </button>
@@ -114,6 +119,18 @@ const TeacherPage = () => {
         </div>
         )}
       </div>
+      <PublicPageQuickEditor
+        title="Chỉnh giao diện Giáo viên"
+        fields={[
+          { path: "teachersPage.title", label: "Tiêu đề trang" },
+          { path: "teachersPage.description", label: "Mô tả trang", type: "textarea" },
+          { path: "teachersPage.buttonColor", label: "Màu nút", type: "color" },
+          { path: "teachersPage.buttonTextColor", label: "Màu chữ nút", type: "color" },
+          { path: "teachersPage.iconColor", label: "Màu icon", type: "color" },
+          { path: "teachersPage.pageBackgroundColor", label: "Màu nền trang", type: "color" },
+          { path: "teachersPage.titleColor", label: "Màu tiêu đề", type: "color" },
+        ]}
+      />
     </div>
   );
 };

@@ -10,6 +10,8 @@ router.get("/teachers/:id", userController.getTeacherById); // Get teacher detai
 
 // Admin routes (quản lý người dùng)
 router.post("/", protect, authorize("Admin"), userController.createUser); // Admin tạo user
+router.get("/online", protect, authorize("Admin"), userController.getOnlineUsers);
+router.get("/activity-status", protect, authorize("Admin"), userController.getUserActivityStatuses);
 router.get("/", protect, authorize("Admin"), userController.getAllUsers);
 router.get("/:id", protect, authorize("Admin"), userController.getUserById);
 router.put("/:id", protect, authorize("Admin"), userController.updateUser);

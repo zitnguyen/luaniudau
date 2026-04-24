@@ -1,6 +1,8 @@
 const Student = require("../models/Student");
 const User = require("../models/User");
 const Schedule = require("../models/Schedule");
+const Progress = require("../models/Progress");
+const Class = require("../models/Class");
 const mongoose = require("mongoose");
 const asyncHandler = require("../middleware/asyncHandler");
 const SKILL_LEVELS = new Set([
@@ -316,10 +318,19 @@ exports.deleteStudent = asyncHandler(async (req, res) => {
   }
 
   await Schedule.deleteMany({ studentId: student._id });
+  await Progress.deleteMany({ studentId: student._id });
+  await Class.updateMany(
+    { studentIds: { $in: [student._id] } },
+    { $pull: { studentIds: student._id } },
+  );
+  await Class.updateMany(
+    { currentStudents: { $gt: 0 } },
+    [{ $set: { currentStudents: { $size: { $ifNull: ["$studentIds", []] } } } }],
+  );
 
   return sendSuccess(res, {
     data: { id: req.params.id, isDeleted: true },
-    message: "Đã xóa mềm hồ sơ học viên và xóa lịch học liên quan",
+    message: "Đã xóa mềm học viên, phiếu học tập và dữ liệu liên quan",
   });
 });
 

@@ -25,6 +25,12 @@ const classService = {
   update: (id, data) => {
     return axiosClient.put(`/classes/${id}`, data);
   },
+  addStudent: (classId, studentId) => {
+    return axiosClient.post(`/classes/${classId}/students`, { studentId });
+  },
+  removeStudent: (classId, studentId) => {
+    return axiosClient.delete(`/classes/${classId}/students/${studentId}`);
+  },
 
   // Delete class
   delete: (id) => {

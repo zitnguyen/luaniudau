@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../../../api/axiosClient';
-import { Mail, Phone, MessageSquare, Check, Clock, Archive } from 'lucide-react';
+import { Mail, Phone, MessageSquare, Archive, Trash2 } from 'lucide-react';
 
 const InquiryList = () => {
     const [inquiries, setInquiries] = useState([]);
@@ -30,6 +30,17 @@ const InquiryList = () => {
         } catch (error) {
             console.error("Error updating status:", error);
             alert("Lỗi cập nhật trạng thái");
+        }
+    };
+
+    const handleDeleteInquiry = async (id) => {
+        if (!window.confirm('Bạn có chắc muốn xóa liên hệ này?')) return;
+        try {
+            await axiosClient.delete(`/inquiries/${id}`);
+            setInquiries((prev) => prev.filter((item) => item._id !== id));
+        } catch (error) {
+            console.error("Error deleting inquiry:", error);
+            alert("Lỗi khi xóa liên hệ");
         }
     };
 
@@ -100,6 +111,13 @@ const InquiryList = () => {
                                     title="Đóng (Spam/Hủy)"
                                 >
                                     <Archive className="w-3.5 h-3.5" />
+                                </button>
+                                <button 
+                                    onClick={() => handleDeleteInquiry(inquiry._id)}
+                                    className="py-1.5 px-2 text-xs font-medium rounded border border-red-200 text-red-600 hover:bg-red-50"
+                                    title="Xóa liên hệ"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </div>

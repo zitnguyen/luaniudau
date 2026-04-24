@@ -1,6 +1,5 @@
 const Progress = require("../models/Progress");
 const Class = require("../models/Class");
-const Enrollment = require("../models/Enrollment");
 const asyncHandler = require("../middleware/asyncHandler");
 const {
   Document,
@@ -44,10 +43,12 @@ const ensureTeacherCanAccessStudentInClass = async ({
   classId,
   studentId,
 }) => {
-  const ownClass = await Class.exists({ _id: classId, teacherId });
-  if (!ownClass) return false;
-  const enrolled = await Enrollment.exists({ classId, studentId });
-  return Boolean(enrolled);
+  const ownClass = await Class.exists({
+    _id: classId,
+    teacherId,
+    studentIds: { $in: [studentId] },
+  });
+  return Boolean(ownClass);
 };
 
 exports.getProgress = asyncHandler(async (req, res) => {

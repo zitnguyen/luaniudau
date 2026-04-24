@@ -135,6 +135,10 @@ exports.signin = asyncHandler(async (req, res) => {
   const accessToken = generateAccessToken(user._id);
   const refreshToken = generateRefreshToken(user._id);
 
+  user.isOnline = true;
+  user.lastSeenAt = new Date();
+  await user.save({ validateBeforeSave: false });
+
   setAccessCookie(res, accessToken);
   setRefreshCookie(res, refreshToken);
 
@@ -149,6 +153,26 @@ exports.signin = asyncHandler(async (req, res) => {
 });
 
 exports.signout = (req, res) => {
+  const markOffline = async () => {
+    try {
+      let token = null;
+      if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+        token = req.headers.authorization.split(" ")[1];
+      } else if (req.cookies?.accessToken) {
+        token = req.cookies.accessToken;
+      }
+      if (!token || !process.env.JWT_SECRET) return;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      await User.findByIdAndUpdate(decoded.id, {
+        isOnline: false,
+        lastSeenAt: new Date(),
+      });
+    } catch {
+      // Signout should not fail when token is invalid/expired.
+    }
+  };
+
+  markOffline();
   res.clearCookie("refreshToken");
   res.clearCookie("accessToken");
   res.json({ message: "Đăng xuất thành công" });

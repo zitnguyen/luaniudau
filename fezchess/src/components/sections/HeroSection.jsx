@@ -10,10 +10,21 @@ const heroImage = "https://images.unsplash.com/photo-1586165368502-1bad197a6461?
 const HeroSection = () => {
   const { cms } = usePublicCms();
   const hero = cms?.home?.hero || {};
+  const home = cms?.home || {};
   const theme = cms?.theme || {};
+  const cleanText = (value, fallback = "") => {
+    const normalized = String(value ?? "").trim();
+    return normalized || fallback;
+  };
 
   const title = hero?.title || "Phát triển tư duy chiến lược cho thế hệ tương lai";
   const highlightedText = hero?.highlightedText || "tư duy chiến lược";
+  const primaryButtonText = cleanText(hero?.primaryButtonText, "Khám phá khóa học");
+  const secondaryButtonText = cleanText(
+    hero?.secondaryButtonText,
+    "Xem video giới thiệu",
+  );
+  const secondaryButtonLink = cleanText(hero?.secondaryButtonLink, "");
   const titleParts = title.includes(highlightedText)
     ? title.split(highlightedText)
     : [title, ""];
@@ -27,15 +38,17 @@ const HeroSection = () => {
       ];
   const heroFontFamily = hero?.fontFamily && hero.fontFamily !== "inherit"
     ? hero.fontFamily
-    : theme?.fontFamily && theme?.fontFamily !== "inherit"
-      ? theme.fontFamily
+    : cms?.home?.fontFamily && cms.home.fontFamily !== "inherit"
+      ? cms.home.fontFamily
+      : theme?.fontFamily && theme?.fontFamily !== "inherit"
+        ? theme.fontFamily
       : undefined;
 
   return (
     <section
       className="relative min-h-[90vh] flex items-center bg-secondary overflow-hidden"
       style={{
-        background: hero?.sectionBgColor || undefined,
+        background: hero?.sectionBgColor || home?.pageBackgroundColor || undefined,
         fontFamily: heroFontFamily,
       }}
     >
@@ -94,7 +107,7 @@ const HeroSection = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
               className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-secondary-foreground leading-tight mb-6"
-              style={{ color: hero?.titleColor || undefined }}
+              style={{ color: hero?.titleColor || home?.titleColor || undefined }}
             >
               {titleParts[0]}
               {highlightedText ? (
@@ -115,7 +128,7 @@ const HeroSection = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
               className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0"
-              style={{ color: hero?.descriptionColor || undefined }}
+              style={{ color: hero?.descriptionColor || home?.descriptionColor || undefined }}
             >
               {hero?.description ||
                 "Z Chess mang đến chương trình đào tạo cờ vua chất lượng cao, giúp trẻ em phát triển tư duy logic, khả năng tập trung và kỹ năng giải quyết vấn đề."}
@@ -133,17 +146,19 @@ const HeroSection = () => {
                   whileTap={{ scale: 0.98 }}
                   className="bg-primary text-primary-foreground text-lg px-8 py-4 w-full sm:w-auto rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl transition-all"
                   style={{
-                    background: hero?.primaryButtonBgColor || undefined,
-                    color: hero?.primaryButtonTextColor || undefined,
+                    background:
+                      hero?.primaryButtonBgColor || cms?.home?.buttonColor || undefined,
+                    color:
+                      hero?.primaryButtonTextColor || cms?.home?.buttonTextColor || undefined,
                     borderRadius: theme?.buttonRadius || undefined,
                   }}
                 >
-                  {hero?.primaryButtonText || "Khám phá khóa học"}
+                  {primaryButtonText}
                 </motion.button>
               </Link>
-              {hero?.secondaryButtonLink ? (
+              {secondaryButtonLink ? (
                 <a
-                  href={hero.secondaryButtonLink}
+                  href={secondaryButtonLink}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-block"
@@ -154,12 +169,13 @@ const HeroSection = () => {
                     className="flex items-center justify-center gap-2 px-8 py-4 bg-transparent border-2 border-secondary-foreground/20 text-secondary-foreground rounded-xl font-medium hover:border-primary hover:text-primary transition-colors duration-300"
                     style={{
                       color: hero?.secondaryButtonTextColor || undefined,
-                      borderColor: hero?.secondaryButtonBorderColor || undefined,
+                      borderColor:
+                        hero?.secondaryButtonBorderColor || cms?.home?.buttonColor || undefined,
                       borderRadius: theme?.buttonRadius || undefined,
                     }}
                   >
                     <PlayIcon className="w-5 h-5" />
-                    {hero?.secondaryButtonText || "Xem video giới thiệu"}
+                    {secondaryButtonText}
                   </motion.button>
                 </a>
               ) : (
@@ -169,12 +185,13 @@ const HeroSection = () => {
                   className="flex items-center justify-center gap-2 px-8 py-4 bg-transparent border-2 border-secondary-foreground/20 text-secondary-foreground rounded-xl font-medium hover:border-primary hover:text-primary transition-colors duration-300"
                   style={{
                     color: hero?.secondaryButtonTextColor || undefined,
-                    borderColor: hero?.secondaryButtonBorderColor || undefined,
+                    borderColor:
+                      hero?.secondaryButtonBorderColor || cms?.home?.buttonColor || undefined,
                     borderRadius: theme?.buttonRadius || undefined,
                   }}
                 >
                   <PlayIcon className="w-5 h-5" />
-                  {hero?.secondaryButtonText || "Xem video giới thiệu"}
+                  {secondaryButtonText}
                 </motion.button>
               )}
             </motion.div>
@@ -188,7 +205,7 @@ const HeroSection = () => {
             >
               {stats.map((stat, index) => (
                 <div key={index} className="text-center">
-                  <div className="text-3xl font-bold text-primary" style={{ color: theme?.primaryColor || undefined }}>
+                  <div className="text-3xl font-bold text-primary" style={{ color: home?.iconColor || theme?.primaryColor || undefined }}>
                     {stat.value}
                   </div>
                   <div className="text-sm text-muted-foreground">

@@ -1,3 +1,4 @@
+import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -10,13 +11,35 @@ import {
   Wallet,
   Bell,
   Settings,
+  MessageCircle,
 } from "lucide-react";
 import authService from "../../../services/authService";
 import SidebarHeader from "./SidebarHeader";
+import chatService from "../../../services/chatService";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const user = authService.getCurrentUser();
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const loadUnread = async () => {
+      try {
+        const data = await chatService.getUnreadSummary();
+        if (!mounted) return;
+        setUnreadCount(Number(data?.totalUnread || 0));
+      } catch {
+        if (mounted) setUnreadCount(0);
+      }
+    };
+    loadUnread();
+    const timer = window.setInterval(loadUnread, 10000);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const handleLogout = () => {
     authService.logout();
@@ -34,9 +57,10 @@ const Sidebar = ({ isOpen, onClose }) => {
     { to: "/admin/courses", icon: BookOpen, label: "Khóa học" },
     { to: "/progress", icon: ClipboardCheck, label: "Phiếu học tập" },
     { to: "/finance", icon: Wallet, label: "Tài chính" },
-    { to: "/admin/payroll", icon: Wallet, label: "Payroll" },
-    { to: "/admin/notifications/new", icon: Bell, label: "Notifications" },
-    { to: "/admin/settings", icon: Settings, label: "System Settings" },
+    { to: "/admin/payroll", icon: Wallet, label: "Bảng lương" },
+    { to: "/admin/notifications", icon: Bell, label: "Thông báo" },
+    { to: "/admin/settings", icon: Settings, label: "Cài đặt hệ thống" },
+    { to: "/admin/chat", icon: MessageCircle, label: "Trò chuyện" },
     {
       to: "/cms/posts",
       icon: null,
@@ -116,6 +140,11 @@ const Sidebar = ({ isOpen, onClose }) => {
                     </span>
                   )}
                   <span className="truncate leading-none">{item.label}</span>
+                  {item.to === "/admin/chat" && unreadCount > 0 && (
+                    <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-red-500 text-white min-w-[20px] text-center">
+                      +{unreadCount}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>

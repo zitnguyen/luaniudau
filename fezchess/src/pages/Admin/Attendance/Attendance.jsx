@@ -9,9 +9,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import classService from "../../../services/classService";
-import enrollmentService from "../../../services/enrollmentService";
 import attendanceService from "../../../services/attendanceService";
-import scheduleService from "../../../services/scheduleService";
 
 const Attendance = () => {
   const [classes, setClasses] = useState([]);
@@ -45,10 +43,10 @@ const Attendance = () => {
       setLoading(true);
       setMessage(null);
       try {
-        const enrollments = await enrollmentService.getAll({
-          classId: selectedClassId,
-        });
-        const list = Array.isArray(enrollments) ? enrollments : [];
+        const selectedClass = await classService.getById(selectedClassId);
+        const list = Array.isArray(selectedClass?.studentIds)
+          ? selectedClass.studentIds
+          : [];
 
         const attendance = await attendanceService.getByClassAndDate(
           selectedClassId,
@@ -56,41 +54,33 @@ const Attendance = () => {
         );
         const attList = Array.isArray(attendance) ? attendance : [];
 
-        const merged = list.map((en) => {
-          const sid = en.studentId?._id || en.studentId;
+        const activeDay = new Date(selectedDate).getDay();
+        const classSlots = Array.isArray(selectedClass?.scheduleSlots)
+          ? selectedClass.scheduleSlots
+          : [];
+        const canMark = classSlots.some((slot) => Number(slot?.day) === activeDay);
+
+        const merged = list.map((student) => {
+          const sid = student?._id || student;
           const rec = attList.find(
             (a) => String(a.studentId?._id || a.studentId) === String(sid),
           );
           return {
             studentMongoId: String(sid),
-            name: en.studentId?.fullName || "Học viên",
-            code: en.studentId?.studentId || "",
+            name: student?.fullName || "Học viên",
+            code: student?.studentId || "",
             status: rec?.status || "absent",
             note: rec?.note || "",
             recordId: rec?._id || null,
-            canMark: false,
+            canMark,
           };
         });
-
-        const dayValue = new Date(selectedDate).getDay();
-        const withSchedule = await Promise.all(
-          merged.map(async (row) => {
-            try {
-              const schedule = await scheduleService.getByStudentId(row.studentMongoId);
-              const slots = Array.isArray(schedule?.slots) ? schedule.slots : [];
-              const canMark = slots.some((slot) => Number(slot?.day) === dayValue);
-              return { ...row, canMark };
-            } catch (error) {
-              return { ...row, canMark: false };
-            }
-          }),
-        );
-        setRows(withSchedule);
+        setRows(merged);
       } catch (e) {
         console.error(e);
         setMessage({
           type: "error",
-          text: "Không tải được danh sách ghi danh / điểm danh.",
+          text: "Không tải được danh sách học viên / điểm danh.",
         });
         setRows([]);
       } finally {
@@ -156,7 +146,7 @@ const Attendance = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Điểm danh</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Chọn lớp + ngày, điểm danh theo danh sách ghi danh.
+            Chọn lớp + ngày, điểm danh theo danh sách học viên trong lớp.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -252,7 +242,7 @@ const Attendance = () => {
           </div>
         ) : rows.length === 0 ? (
           <div className="py-16 text-center text-gray-500">
-            Lớp chưa có học viên ghi danh.
+            Lớp chưa có học viên.
           </div>
         ) : (
           <div className="overflow-x-auto">

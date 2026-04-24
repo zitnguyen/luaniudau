@@ -3,6 +3,7 @@ import axiosClient from "../../api/axiosClient";
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle } from "lucide-react";
 import { useSystemSettings } from "../../context/SystemSettingsContext";
 import { usePublicCms } from "../../context/PublicCmsContext";
+import PublicPageQuickEditor from "../../components/cms/PublicPageQuickEditor";
 
 const ContactPage = () => {
   const { settings } = useSystemSettings();
@@ -46,7 +47,7 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="bg-white">
+    <div className="bg-white" style={{ backgroundColor: page?.pageBackgroundColor || "#FFFFFF", fontFamily: page?.fontFamily && page.fontFamily !== "inherit" ? page.fontFamily : undefined }}>
       {/* Hero Section */}
       <div
         className="text-white py-20"
@@ -58,8 +59,8 @@ const ContactPage = () => {
         }}
       >
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold mb-4">{page?.title || "Liên Hệ Với Chúng Tôi"}</h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+          <h1 className="text-4xl font-bold mb-4" style={{ color: page?.titleColor || "#FFFFFF", fontSize: page?.titleFontSize || undefined }}>{page?.title || "Liên Hệ Với Chúng Tôi"}</h1>
+          <p className="text-xl max-w-2xl mx-auto" style={{ color: page?.descriptionColor || "#D1D5DB", fontSize: page?.descriptionFontSize || undefined }}>
             {page?.description ||
               "Chúng tôi luôn sẵn sàng lắng nghe và giải đáp mọi thắc mắc của bạn về các khóa học cờ vua."}
           </p>
@@ -75,7 +76,7 @@ const ContactPage = () => {
             </h2>
             <div className="space-y-8">
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg text-primary">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: `${page?.iconColor || "#2563EB"}1A`, color: page?.iconColor || "#2563EB" }}>
                   <MapPin className="w-6 h-6" />
                 </div>
                 <div>
@@ -89,7 +90,7 @@ const ContactPage = () => {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg text-primary">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: `${page?.iconColor || "#2563EB"}1A`, color: page?.iconColor || "#2563EB" }}>
                   <Phone className="w-6 h-6" />
                 </div>
                 <div>
@@ -102,7 +103,7 @@ const ContactPage = () => {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg text-primary">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: `${page?.iconColor || "#2563EB"}1A`, color: page?.iconColor || "#2563EB" }}>
                   <Mail className="w-6 h-6" />
                 </div>
                 <div>
@@ -114,7 +115,7 @@ const ContactPage = () => {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg text-primary">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: `${page?.iconColor || "#2563EB"}1A`, color: page?.iconColor || "#2563EB" }}>
                   <Clock className="w-6 h-6" />
                 </div>
                 <div>
@@ -267,6 +268,7 @@ const ContactPage = () => {
                   type="submit"
                   disabled={loading}
                   className="w-full py-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/30"
+                  style={{ backgroundColor: page?.buttonColor || undefined, color: page?.buttonTextColor || undefined }}
                 >
                   {loading ? (
                     "Đang gửi..."
@@ -282,6 +284,18 @@ const ContactPage = () => {
           </div>
         </div>
       </div>
+      <PublicPageQuickEditor
+        title="Chỉnh giao diện Liên hệ"
+        fields={[
+          { path: "contactPage.title", label: "Tiêu đề trang" },
+          { path: "contactPage.description", label: "Mô tả trang", type: "textarea" },
+          { path: "contactPage.buttonColor", label: "Màu nút", type: "color" },
+          { path: "contactPage.buttonTextColor", label: "Màu chữ nút", type: "color" },
+          { path: "contactPage.iconColor", label: "Màu icon", type: "color" },
+          { path: "contactPage.pageBackgroundColor", label: "Màu nền trang", type: "color" },
+          { path: "contactPage.titleColor", label: "Màu tiêu đề", type: "color" },
+        ]}
+      />
     </div>
   );
 };

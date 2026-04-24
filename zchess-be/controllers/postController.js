@@ -1,6 +1,22 @@
 const Post = require("../models/Post");
 const asyncHandler = require("../middleware/asyncHandler");
 
+const normalizeImages = (images, thumbnail) => {
+  const list = Array.isArray(images)
+    ? images
+    : typeof images === "string"
+      ? images.split(",")
+      : [];
+  const normalized = list
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+  const cleanThumbnail = String(thumbnail || "").trim();
+  if (cleanThumbnail && !normalized.includes(cleanThumbnail)) {
+    normalized.unshift(cleanThumbnail);
+  }
+  return normalized;
+};
+
 exports.getPosts = asyncHandler(async (req, res) => {
   const { category, tag, page = 1, limit = 10 } = req.query;
   const query = { isPublished: true };
@@ -48,17 +64,21 @@ exports.createPost = asyncHandler(async (req, res) => {
     content,
     summary,
     thumbnail,
+    images,
     category,
     tags,
     isPublished,
   } = req.body;
+
+  const normalizedImages = normalizeImages(images, thumbnail);
 
   const post = new Post({
     title,
     slug,
     content,
     summary,
-    thumbnail,
+    thumbnail: String(thumbnail || normalizedImages[0] || "").trim(),
+    images: normalizedImages,
     author: req.user._id,
     category,
     tags,
@@ -70,7 +90,13 @@ exports.createPost = asyncHandler(async (req, res) => {
 });
 
 exports.updatePost = asyncHandler(async (req, res) => {
-  const post = await Post.findByIdAndUpdate(req.params.id, req.body, {
+  const payload = { ...req.body };
+  if ("images" in payload || "thumbnail" in payload) {
+    payload.images = normalizeImages(payload.images, payload.thumbnail);
+    payload.thumbnail = String(payload.thumbnail || payload.images[0] || "").trim();
+  }
+
+  const post = await Post.findByIdAndUpdate(req.params.id, payload, {
     new: true,
   });
   if (!post) {
