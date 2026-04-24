@@ -10,6 +10,10 @@ const CourseCard = ({
   students,
   rating,
   price,
+  buttonText = "Xem chi tiết",
+  buttonBgColor,
+  buttonTextColor,
+  buttonBorderColor,
 }) => {
   return (
     <motion.div
@@ -66,8 +70,13 @@ const CourseCard = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="px-4 py-2 bg-secondary text-secondary-foreground rounded-xl font-medium hover:bg-primary hover:text-primary-foreground transition-colors duration-300"
+            style={{
+              backgroundColor: buttonBgColor || undefined,
+              color: buttonTextColor || undefined,
+              border: buttonBorderColor ? `1px solid ${buttonBorderColor}` : undefined,
+            }}
           >
-            Xem chi tiết
+            {buttonText}
           </motion.button>
         </div>
       </div>

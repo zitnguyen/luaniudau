@@ -4,12 +4,12 @@ import {
   Save,
   CheckCircle,
   XCircle,
-  AlertCircle,
   Loader2,
   BookOpen,
 } from "lucide-react";
 import classService from "../../../services/classService";
 import attendanceService from "../../../services/attendanceService";
+import { toast } from "sonner";
 
 const Attendance = () => {
   const [classes, setClasses] = useState([]);
@@ -20,7 +20,6 @@ const Attendance = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState(null);
 
   useEffect(() => {
     const loadClasses = async () => {
@@ -41,7 +40,6 @@ const Attendance = () => {
         return;
       }
       setLoading(true);
-      setMessage(null);
       try {
         const selectedClass = await classService.getById(selectedClassId);
         const list = Array.isArray(selectedClass?.studentIds)
@@ -78,10 +76,7 @@ const Attendance = () => {
         setRows(merged);
       } catch (e) {
         console.error(e);
-        setMessage({
-          type: "error",
-          text: "Không tải được danh sách học viên / điểm danh.",
-        });
+        toast.error("Không tải được danh sách học viên / điểm danh.");
         setRows([]);
       } finally {
         setLoading(false);
@@ -115,7 +110,6 @@ const Attendance = () => {
   const handleSave = async () => {
     if (!selectedClassId) return;
     setSaving(true);
-    setMessage(null);
     try {
       await Promise.all(
         rows
@@ -130,11 +124,10 @@ const Attendance = () => {
             }),
           ),
       );
-      setMessage({ type: "success", text: "Đã lưu điểm danh thành công!" });
-      setTimeout(() => setMessage(null), 3000);
+      toast.success("Đã lưu điểm danh thành công!");
     } catch (e) {
       console.error(e);
-      setMessage({ type: "error", text: "Lỗi khi lưu điểm danh." });
+      toast.error(e?.response?.data?.message || "Lỗi khi lưu điểm danh.");
     } finally {
       setSaving(false);
     }
@@ -191,23 +184,6 @@ const Attendance = () => {
           </button>
         </div>
       </div>
-
-      {message && (
-        <div
-          className={`flex items-center gap-3 p-4 rounded-xl border ${
-            message.type === "success"
-              ? "bg-green-50 text-green-700 border-green-100"
-              : "bg-red-50 text-red-700 border-red-100"
-          }`}
-        >
-          {message.type === "success" ? (
-            <CheckCircle size={20} className="text-green-500" />
-          ) : (
-            <AlertCircle size={20} className="text-red-500" />
-          )}
-          <span className="font-medium">{message.text}</span>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">

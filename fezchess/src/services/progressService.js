@@ -25,26 +25,42 @@ const progressService = {
     axiosClient.delete(`/progress/${studentId}/${classId}`),
 
   exportWord: async (studentId, classId, fallbackStudentName = "HocVien") => {
-    const response = await axiosClient.get(
-      `/progress/export/${studentId}/${classId}`,
-      { responseType: "blob" },
-    );
-    const blob = new Blob([response.data], {
-      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    });
+    try {
+      const response = await axiosClient.get(
+        `/progress/export/${studentId}/${classId}`,
+        { responseType: "blob" },
+      );
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
 
-    const fallback = `PhieuHocTap_${fallbackStudentName}.docx`;
-    const disposition = response?.headers?.["content-disposition"] || "";
-    const filename = getFilenameFromDisposition(disposition, fallback);
+      const fallback = `PhieuHocTap_${fallbackStudentName}.docx`;
+      const disposition = response?.headers?.["content-disposition"] || "";
+      const filename = getFilenameFromDisposition(disposition, fallback);
 
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      let message = "Xuất file Word thất bại";
+      if (error?.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const parsed = JSON.parse(text);
+          if (parsed?.message) message = parsed.message;
+        } catch {
+          // keep default message
+        }
+      } else if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      throw new Error(message);
+    }
   },
 };
 

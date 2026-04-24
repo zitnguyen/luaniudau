@@ -1,6 +1,9 @@
 const Order = require("../models/Order");
 const Course = require("../models/Course");
 const CourseAccess = require("../models/CourseAccess");
+const Notification = require("../models/Notification");
+const NotificationRecipient = require("../models/NotificationRecipient");
+const User = require("../models/User");
 const asyncHandler = require("../middleware/asyncHandler");
 
 function assertOrderAccess(order, user) {
@@ -19,6 +22,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
 
   let totalAmount = 0;
   const orderItems = [];
+  const courseTitles = [];
 
   for (const item of items) {
     const existingPendingOrder = await Order.findOne({
@@ -38,6 +42,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
     }
     const price = course.salePrice > 0 ? course.salePrice : course.price;
     totalAmount += price;
+    courseTitles.push(course.title || "Khóa học");
     orderItems.push({
       courseId: course._id,
       price: price,
@@ -53,6 +58,34 @@ exports.createOrder = asyncHandler(async (req, res) => {
   });
 
   const savedOrder = await order.save();
+
+  // Notify all admins when a new pending order is created.
+  try {
+    const adminUsers = await User.find({ role: "Admin" }).select("_id role");
+    if (adminUsers.length > 0) {
+      const buyerName = req.user?.fullName || req.user?.username || "Người dùng";
+      const shortOrderId = String(savedOrder._id).slice(-6).toUpperCase();
+      const notification = await Notification.create({
+        title: "Đơn hàng khóa học mới chờ duyệt",
+        content: `${buyerName} vừa tạo đơn ORD-${shortOrderId} (${courseTitles.join(", ")}). Vui lòng vào Tài chính để duyệt.`,
+        createdBy: userId,
+      });
+      await NotificationRecipient.insertMany(
+        adminUsers.map((admin) => ({
+          notificationId: notification._id,
+          userId: admin._id,
+          roleSnapshot: admin.role,
+          isRead: false,
+          readAt: null,
+        })),
+        { ordered: false },
+      );
+    }
+  } catch (notifyError) {
+    // Do not block order creation if notification dispatch fails.
+    console.error("Failed to notify admins for pending order:", notifyError);
+  }
+
   res.status(201).json(savedOrder);
 });
 

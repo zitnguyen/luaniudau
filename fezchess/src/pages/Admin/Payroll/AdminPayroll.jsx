@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import payrollService from "../../../services/payrollService";
 import classService from "../../../services/classService";
+import { toast } from "sonner";
 
 const formatMoney = (value) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
@@ -13,7 +14,6 @@ const AdminPayroll = () => {
   const [teacherDetail, setTeacherDetail] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [savingSessionId, setSavingSessionId] = useState("");
   const [editingSessionId, setEditingSessionId] = useState("");
   const [salaryDraft, setSalaryDraft] = useState({});
@@ -63,10 +63,9 @@ const AdminPayroll = () => {
   const loadAll = async () => {
     try {
       setLoading(true);
-      setError("");
       await Promise.all([loadTeachers(), loadClasses()]);
     } catch (e) {
-      setError("Không thể tải dữ liệu bảng lương.");
+      toast.error("Không thể tải dữ liệu bảng lương.");
     } finally {
       setLoading(false);
     }
@@ -78,7 +77,7 @@ const AdminPayroll = () => {
 
   useEffect(() => {
     loadTeacherDetail(selectedTeacherId).catch(() => {
-      setError("Không thể tải chi tiết bảng lương theo giáo viên.");
+      toast.error("Không thể tải chi tiết bảng lương theo giáo viên.");
     });
   }, [selectedTeacherId]);
 
@@ -106,8 +105,9 @@ const AdminPayroll = () => {
       const salary = Number(value);
       await payrollService.updateSessionSalary(sessionId, salary);
       await Promise.all([loadTeacherDetail(selectedTeacherId), loadTeachers()]);
+      toast.success("Đã cập nhật lương ca dạy.");
     } catch (e) {
-      setError(e?.response?.data?.message || "Không thể cập nhật lương.");
+      toast.error(e?.response?.data?.message || "Không thể cập nhật lương.");
     } finally {
       setSavingSessionId("");
     }
@@ -143,8 +143,9 @@ const AdminPayroll = () => {
       if (editingSessionId === sessionId) {
         setEditingSessionId("");
       }
+      toast.success("Đã đặt lại lương ca dạy.");
     } catch (e) {
-      setError(e?.response?.data?.message || "Không thể reset lương.");
+      toast.error(e?.response?.data?.message || "Không thể đặt lại lương.");
     } finally {
       setSavingSessionId("");
     }
@@ -152,12 +153,11 @@ const AdminPayroll = () => {
 
   const handleExport = async (type) => {
     if (!selectedTeacherId) {
-      setError("Vui lòng chọn giáo viên trước khi xuất phiếu lương.");
+      toast.error("Vui lòng chọn giáo viên trước khi xuất phiếu lương.");
       return;
     }
     try {
       setExportingType(type);
-      setError("");
       const teacherName =
         teacherDetail?.teacher?.fullName || teacherDetail?.teacher?.username || "Teacher";
       await payrollService.exportPayslip({
@@ -167,20 +167,21 @@ const AdminPayroll = () => {
         type,
         fallback: `Payslip_${teacherName}_${filterMonth}_${filterYear}`,
       });
+      toast.success(`Đã xuất phiếu lương ${type.toUpperCase()}.`);
     } catch (e) {
       if (e?.response?.data instanceof Blob) {
         try {
           const text = await e.response.data.text();
           const parsed = JSON.parse(text);
           if (parsed?.message) {
-            setError(parsed.message);
+            toast.error(parsed.message);
             return;
           }
         } catch {
           // ignore blob parse errors
         }
       }
-      setError(e?.response?.data?.message || "Xuất phiếu lương thất bại.");
+      toast.error(e?.response?.data?.message || "Xuất phiếu lương thất bại.");
     } finally {
       setExportingType("");
     }
@@ -190,7 +191,6 @@ const AdminPayroll = () => {
     e.preventDefault();
     try {
       setCreatingSession(true);
-      setError("");
       await payrollService.createAdminSession({
         teacherId: sessionForm.teacherId || selectedTeacherId,
         classId: sessionForm.classId,
@@ -210,8 +210,9 @@ const AdminPayroll = () => {
         note: "",
       });
       await Promise.all([loadTeacherDetail(selectedTeacherId), loadTeachers()]);
+      toast.success("Đã thêm ca lương.");
     } catch (e2) {
-      setError(e2?.response?.data?.message || "Không thể tạo ca bảng lương.");
+      toast.error(e2?.response?.data?.message || "Không thể tạo ca bảng lương.");
     } finally {
       setCreatingSession(false);
     }
@@ -220,11 +221,11 @@ const AdminPayroll = () => {
   const handleDeleteSession = async (sessionId) => {
     if (!window.confirm("Bạn có chắc muốn xóa ca dạy này?")) return;
     try {
-      setError("");
       await payrollService.deleteSession(sessionId);
       await Promise.all([loadTeacherDetail(selectedTeacherId), loadTeachers()]);
+      toast.success("Đã xóa ca dạy.");
     } catch (e) {
-      setError(e?.response?.data?.message || "Không thể xóa ca dạy.");
+      toast.error(e?.response?.data?.message || "Không thể xóa ca dạy.");
     }
   };
 
@@ -362,12 +363,6 @@ const AdminPayroll = () => {
               {formatMoney(summary.totalSalary)}
             </div>
           </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="text-sm px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700">
-          {error}
         </div>
       )}
 

@@ -79,6 +79,8 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
             const canonicalMoves = Array.isArray(configuredMoves) ? configuredMoves : [];
             const canonicalGame =
                 canonicalMoves.length > 0 ? rebuildGameFromMoves(canonicalMoves) : adminChessGame;
+            const canonicalFen = String(formData.initialFen || canonicalGame.fen() || "").trim();
+            const canonicalPgn = String(formData.initialPgn || canonicalGame.pgn() || "").trim();
             const payload =
                 formData.type === "chess"
                     ? {
@@ -86,8 +88,8 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
                           content: "",
                           chessMode: "internal",
                           chessPlatform: "internal-board",
-                          initialFen: canonicalGame.fen(),
-                          initialPgn: canonicalGame.pgn(),
+                          initialFen: canonicalFen,
+                          initialPgn: canonicalPgn,
                           initialMoves: canonicalMoves,
                       }
                     : { ...formData };
@@ -502,7 +504,7 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
                                 >
                                     Hủy
                                 </button>
-                                <button onClick={handleSubmit} className="px-3 py-1.5 text-xs bg-primary text-white rounded hover:bg-primary/90">
+                                <button type="button" onClick={handleSubmit} className="px-3 py-1.5 text-xs bg-primary text-white rounded hover:bg-primary/90">
                                     {editingLessonId ? "Cập Nhật Bài Học" : "Lưu Bài Học"}
                                 </button>
                             </div>

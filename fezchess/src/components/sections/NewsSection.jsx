@@ -28,19 +28,22 @@ const NewsSection = () => {
     if (!loading && posts.length === 0) return null;
 
     return (
-        <section className="py-20 bg-white">
+        <section
+            className="py-20 bg-white"
+            style={{ backgroundColor: section?.sectionBgColor || undefined }}
+        >
             <div className="container mx-auto px-4">
                 <div className="flex justify-between items-end mb-12">
                      <div>
-                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 font-heading">
+                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 font-heading" style={{ color: section?.titleColor || undefined }}>
                             {section?.title || "Tin Tức & Hoạt Động"}
                         </h2>
-                        <p className="text-gray-600 max-w-2xl">
+                        <p className="text-gray-600 max-w-2xl" style={{ color: section?.descriptionColor || undefined }}>
                             {section?.description || "Cập nhật những thông tin mới nhất từ câu lạc bộ."}
                         </p>
                     </div>
-                    <Link to="/news" className="hidden md:flex items-center text-primary font-bold hover:text-primary/80 transition-colors">
-                        Xem tất cả <ArrowRight className="ml-2 w-5 h-5" />
+                    <Link to="/news" className="hidden md:flex items-center font-bold hover:text-primary/80 transition-colors" style={{ color: section?.buttonTextColor || undefined }}>
+                        {section?.buttonText || "Xem tất cả"} <ArrowRight className="ml-2 w-5 h-5" />
                     </Link>
                 </div>
 
@@ -77,8 +80,11 @@ const NewsSection = () => {
                                 <p className="text-gray-600 dark:text-slate-300 text-sm line-clamp-2 mb-4">
                                     {post.summary || "Xem chi tiết..."}
                                 </p>
-                                <span className="inline-flex items-center text-sm font-semibold text-primary dark:text-blue-300">
-                                    Đọc thêm <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                                <span
+                                    className="inline-flex items-center text-sm font-semibold text-primary dark:text-blue-300"
+                                    style={{ color: section?.cardButtonTextColor || undefined }}
+                                >
+                                    {section?.cardButtonText || "Đọc thêm"} <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                                 </span>
                             </div>
                         </Link>
@@ -86,8 +92,8 @@ const NewsSection = () => {
                 </div>
 
                 <div className="mt-8 text-center md:hidden">
-                    <Link to="/news" className="inline-block px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors">
-                        Xem tất cả tin tức
+                    <Link to="/news" className="inline-block px-6 py-3 font-bold rounded-lg hover:bg-gray-200 transition-colors" style={{ backgroundColor: section?.buttonBgColor || undefined, color: section?.buttonTextColor || undefined }}>
+                        {section?.mobileButtonText || "Xem tất cả tin tức"}
                     </Link>
                 </div>
             </div>

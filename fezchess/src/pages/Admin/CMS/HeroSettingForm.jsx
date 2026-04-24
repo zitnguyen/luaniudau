@@ -25,7 +25,7 @@ const defaultCms = {
     hero: {
       badgeText: "🏆 Trung tâm Cờ Vua hàng đầu",
       title: "Phát triển tư duy chiến lược cho thế hệ tương lai",
-      highlightedText: "tư duy chiến lược",
+      highlightedText: "",
       description:
         "Z Chess mang đến chương trình đào tạo cờ vua chất lượng cao, giúp trẻ em phát triển tư duy logic, khả năng tập trung và kỹ năng giải quyết vấn đề.",
       primaryButtonText: "Khám phá khóa học",
@@ -36,12 +36,94 @@ const defaultCms = {
       descriptionColor: "#CBD5E1",
       titleFontSize: "56px",
     },
-    courses: { title: "Khóa học nổi bật" },
-    teachers: { title: "Đội ngũ giảng viên" },
-    news: { title: "Tin tức mới nhất" },
-    testimonials: { title: "Cảm nhận học viên" },
-    contact: { title: "Liên hệ với chúng tôi" },
-    cta: {},
+    courses: {
+      badge: "Khóa học",
+      title: "Khóa học phổ biến",
+      description: "",
+      buttonText: "Xem tất cả khóa học →",
+      sectionBgColor: "#FFFFFF",
+      badgeBgColor: "#DBEAFE",
+      badgeTextColor: "#2563EB",
+      titleColor: "#0F172A",
+      descriptionColor: "#64748B",
+      buttonBgColor: "#0F172A",
+      buttonTextColor: "#FFFFFF",
+      buttonBorderColor: "#E2E8F0",
+      cardButtonText: "Xem chi tiết",
+      cardButtonBgColor: "#0F172A",
+      cardButtonTextColor: "#FFFFFF",
+      cardButtonBorderColor: "#E2E8F0",
+    },
+    teachers: {
+      badge: "Đội ngũ",
+      title: "Giáo viên xuất sắc",
+      description: "",
+      sectionBgColor: "#F8FAFC",
+      badgeBgColor: "#DBEAFE",
+      badgeTextColor: "#2563EB",
+      titleColor: "#0F172A",
+      descriptionColor: "#64748B",
+      actionButtonBgColor: "#F1F5F9",
+      actionButtonTextColor: "#0F172A",
+    },
+    news: {
+      title: "Tin Tức & Hoạt Động",
+      description: "",
+      buttonText: "Xem tất cả",
+      mobileButtonText: "Xem tất cả tin tức",
+      sectionBgColor: "#FFFFFF",
+      titleColor: "#111827",
+      descriptionColor: "#4B5563",
+      buttonBgColor: "#F3F4F6",
+      buttonTextColor: "#2563EB",
+      cardButtonText: "Đọc thêm",
+      cardButtonTextColor: "#2563EB",
+    },
+    testimonials: {
+      badge: "Phản hồi",
+      title: "Phụ huynh nói gì về chúng tôi",
+      description: "",
+      sectionBgColor: "#FFFFFF",
+      badgeBgColor: "#DBEAFE",
+      badgeTextColor: "#2563EB",
+      titleColor: "#0F172A",
+      descriptionColor: "#64748B",
+    },
+    contact: {
+      badge: "Liên hệ",
+      title: "Đăng ký học thử",
+      highlightedText: "miễn phí",
+      description: "",
+      sectionBgColor: "#FFFFFF",
+      badgeBgColor: "#DBEAFE",
+      badgeTextColor: "#2563EB",
+      titleColor: "#0F172A",
+      highlightColor: "#CA8A04",
+      descriptionColor: "#64748B",
+      submitButtonText: "Đăng ký học thử miễn phí",
+      submitButtonBgColor: "#2563EB",
+      submitButtonTextColor: "#FFFFFF",
+    },
+    cta: {
+      title: "Bắt đầu hành trình cờ vua",
+      highlightedText: "ngay hôm nay",
+      description: "",
+      primaryButtonText: "Đăng ký học thử miễn phí",
+      secondaryButtonText: "Tìm hiểu thêm",
+      trustItem1: "Học thử miễn phí",
+      trustItem2: "Không ràng buộc",
+      trustItem3: "Hoàn tiền 100%",
+      sectionBgColor: "#FFFFFF",
+      cardBgColor: "#0F172A",
+      titleColor: "#FFFFFF",
+      highlightColor: "#CA8A04",
+      descriptionColor: "#CBD5E1",
+      primaryButtonBgColor: "#2563EB",
+      primaryButtonTextColor: "#FFFFFF",
+      secondaryButtonTextColor: "#FFFFFF",
+      secondaryButtonBorderColor: "#334155",
+      trustTextColor: "#CBD5E1",
+    },
   },
   courseStore: {
     title: "KHO KHÓA HỌC VIDEO",
@@ -296,6 +378,12 @@ const HeroSettingForm = () => {
               <CInput label="Tên nút phụ" value={cms.home?.hero?.secondaryButtonText} onChange={(v) => updateCms("home.hero.secondaryButtonText", v)} placeholder="VD: Xem video giới thiệu" />
               <CInput label="Link nút phụ" value={cms.home?.hero?.secondaryButtonLink} onChange={(v) => updateCms("home.hero.secondaryButtonLink", v)} placeholder="VD: https://..." />
             </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              <ColorPicker label="Màu nền nút chính" value={cms.home?.hero?.primaryButtonBgColor} onChange={(v) => updateCms("home.hero.primaryButtonBgColor", v)} />
+              <ColorPicker label="Màu chữ nút chính" value={cms.home?.hero?.primaryButtonTextColor} onChange={(v) => updateCms("home.hero.primaryButtonTextColor", v)} />
+              <ColorPicker label="Màu chữ nút phụ" value={cms.home?.hero?.secondaryButtonTextColor} onChange={(v) => updateCms("home.hero.secondaryButtonTextColor", v)} />
+              <ColorPicker label="Màu viền nút phụ" value={cms.home?.hero?.secondaryButtonBorderColor} onChange={(v) => updateCms("home.hero.secondaryButtonBorderColor", v)} />
+            </div>
             <div className="grid md:grid-cols-2 gap-3">
               <CInput label="Ảnh/Video Hero (URL)" value={cms.home?.hero?.mediaUrl} onChange={(v) => updateCms("home.hero.mediaUrl", v)} placeholder="Dán URL media Hero" />
               <label className="inline-flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer h-fit">
@@ -319,6 +407,118 @@ const HeroSettingForm = () => {
             <CInput label="Tiêu đề section Tin tức" value={cms.home?.news?.title} onChange={(v) => updateCms("home.news.title", v)} placeholder="Nhập tiêu đề section Tin tức" />
             <CInput label="Tiêu đề section Đánh giá" value={cms.home?.testimonials?.title} onChange={(v) => updateCms("home.testimonials.title", v)} placeholder="Nhập tiêu đề section Đánh giá" />
             <CInput label="Tiêu đề section Liên hệ" value={cms.home?.contact?.title} onChange={(v) => updateCms("home.contact.title", v)} placeholder="Nhập tiêu đề section Liên hệ" />
+          </Card>
+          <Card title="Khối Khóa học (Trang chủ)" subtitle="Sửa chữ, nút và màu khối Khóa học">
+            <div className="grid md:grid-cols-2 gap-3">
+              <CInput label="Nhãn badge" value={cms.home?.courses?.badge} onChange={(v) => updateCms("home.courses.badge", v)} placeholder="VD: Khóa học" />
+              <CInput label="Tiêu đề khối" value={cms.home?.courses?.title} onChange={(v) => updateCms("home.courses.title", v)} placeholder="VD: Khóa học phổ biến" />
+              <CInput label="Mô tả khối" value={cms.home?.courses?.description} onChange={(v) => updateCms("home.courses.description", v)} placeholder="Mô tả ngắn cho khối Khóa học" />
+              <CInput label="Chữ nút" value={cms.home?.courses?.buttonText} onChange={(v) => updateCms("home.courses.buttonText", v)} placeholder="VD: Xem tất cả khóa học →" />
+              <CInput label="Chữ nút card khóa học" value={cms.home?.courses?.cardButtonText} onChange={(v) => updateCms("home.courses.cardButtonText", v)} placeholder="VD: Xem chi tiết" />
+            </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              <ColorPicker label="Màu nền khối" value={cms.home?.courses?.sectionBgColor} onChange={(v) => updateCms("home.courses.sectionBgColor", v)} />
+              <ColorPicker label="Màu nền badge" value={cms.home?.courses?.badgeBgColor} onChange={(v) => updateCms("home.courses.badgeBgColor", v)} />
+              <ColorPicker label="Màu chữ badge" value={cms.home?.courses?.badgeTextColor} onChange={(v) => updateCms("home.courses.badgeTextColor", v)} />
+              <ColorPicker label="Màu tiêu đề" value={cms.home?.courses?.titleColor} onChange={(v) => updateCms("home.courses.titleColor", v)} />
+              <ColorPicker label="Màu mô tả" value={cms.home?.courses?.descriptionColor} onChange={(v) => updateCms("home.courses.descriptionColor", v)} />
+              <ColorPicker label="Màu nền nút" value={cms.home?.courses?.buttonBgColor} onChange={(v) => updateCms("home.courses.buttonBgColor", v)} />
+              <ColorPicker label="Màu chữ nút" value={cms.home?.courses?.buttonTextColor} onChange={(v) => updateCms("home.courses.buttonTextColor", v)} />
+              <ColorPicker label="Màu viền nút" value={cms.home?.courses?.buttonBorderColor} onChange={(v) => updateCms("home.courses.buttonBorderColor", v)} />
+              <ColorPicker label="Màu nền nút card" value={cms.home?.courses?.cardButtonBgColor} onChange={(v) => updateCms("home.courses.cardButtonBgColor", v)} />
+              <ColorPicker label="Màu chữ nút card" value={cms.home?.courses?.cardButtonTextColor} onChange={(v) => updateCms("home.courses.cardButtonTextColor", v)} />
+              <ColorPicker label="Màu viền nút card" value={cms.home?.courses?.cardButtonBorderColor} onChange={(v) => updateCms("home.courses.cardButtonBorderColor", v)} />
+            </div>
+          </Card>
+          <Card title="Khối Giáo viên (Trang chủ)" subtitle="Sửa chữ và màu khối Giáo viên">
+            <div className="grid md:grid-cols-2 gap-3">
+              <CInput label="Nhãn badge" value={cms.home?.teachers?.badge} onChange={(v) => updateCms("home.teachers.badge", v)} placeholder="VD: Đội ngũ" />
+              <CInput label="Tiêu đề khối" value={cms.home?.teachers?.title} onChange={(v) => updateCms("home.teachers.title", v)} placeholder="VD: Giáo viên xuất sắc" />
+              <CInput label="Mô tả khối" value={cms.home?.teachers?.description} onChange={(v) => updateCms("home.teachers.description", v)} placeholder="Mô tả ngắn cho khối Giáo viên" />
+            </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              <ColorPicker label="Màu nền khối" value={cms.home?.teachers?.sectionBgColor} onChange={(v) => updateCms("home.teachers.sectionBgColor", v)} />
+              <ColorPicker label="Màu nền badge" value={cms.home?.teachers?.badgeBgColor} onChange={(v) => updateCms("home.teachers.badgeBgColor", v)} />
+              <ColorPicker label="Màu chữ badge" value={cms.home?.teachers?.badgeTextColor} onChange={(v) => updateCms("home.teachers.badgeTextColor", v)} />
+              <ColorPicker label="Màu tiêu đề" value={cms.home?.teachers?.titleColor} onChange={(v) => updateCms("home.teachers.titleColor", v)} />
+              <ColorPicker label="Màu mô tả" value={cms.home?.teachers?.descriptionColor} onChange={(v) => updateCms("home.teachers.descriptionColor", v)} />
+              <ColorPicker label="Màu nền nút icon card" value={cms.home?.teachers?.actionButtonBgColor} onChange={(v) => updateCms("home.teachers.actionButtonBgColor", v)} />
+              <ColorPicker label="Màu icon card" value={cms.home?.teachers?.actionButtonTextColor} onChange={(v) => updateCms("home.teachers.actionButtonTextColor", v)} />
+            </div>
+          </Card>
+          <Card title="Khối Đánh giá (Trang chủ)" subtitle="Sửa chữ và màu khối Đánh giá">
+            <div className="grid md:grid-cols-2 gap-3">
+              <CInput label="Nhãn badge" value={cms.home?.testimonials?.badge} onChange={(v) => updateCms("home.testimonials.badge", v)} placeholder="VD: Phản hồi" />
+              <CInput label="Tiêu đề khối" value={cms.home?.testimonials?.title} onChange={(v) => updateCms("home.testimonials.title", v)} placeholder="VD: Phụ huynh nói gì về chúng tôi" />
+              <CInput label="Mô tả khối" value={cms.home?.testimonials?.description} onChange={(v) => updateCms("home.testimonials.description", v)} placeholder="Mô tả ngắn cho khối Đánh giá" />
+            </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              <ColorPicker label="Màu nền khối" value={cms.home?.testimonials?.sectionBgColor} onChange={(v) => updateCms("home.testimonials.sectionBgColor", v)} />
+              <ColorPicker label="Màu nền badge" value={cms.home?.testimonials?.badgeBgColor} onChange={(v) => updateCms("home.testimonials.badgeBgColor", v)} />
+              <ColorPicker label="Màu chữ badge" value={cms.home?.testimonials?.badgeTextColor} onChange={(v) => updateCms("home.testimonials.badgeTextColor", v)} />
+              <ColorPicker label="Màu tiêu đề" value={cms.home?.testimonials?.titleColor} onChange={(v) => updateCms("home.testimonials.titleColor", v)} />
+              <ColorPicker label="Màu mô tả" value={cms.home?.testimonials?.descriptionColor} onChange={(v) => updateCms("home.testimonials.descriptionColor", v)} />
+            </div>
+          </Card>
+          <Card title="Khối Tin tức (Trang chủ)" subtitle="Sửa chữ, nút và màu khối Tin tức">
+            <div className="grid md:grid-cols-2 gap-3">
+              <CInput label="Tiêu đề khối" value={cms.home?.news?.title} onChange={(v) => updateCms("home.news.title", v)} placeholder="VD: Tin Tức & Hoạt Động" />
+              <CInput label="Mô tả khối" value={cms.home?.news?.description} onChange={(v) => updateCms("home.news.description", v)} placeholder="Mô tả ngắn cho khối Tin tức" />
+              <CInput label="Chữ nút desktop" value={cms.home?.news?.buttonText} onChange={(v) => updateCms("home.news.buttonText", v)} placeholder="VD: Xem tất cả" />
+              <CInput label="Chữ nút mobile" value={cms.home?.news?.mobileButtonText} onChange={(v) => updateCms("home.news.mobileButtonText", v)} placeholder="VD: Xem tất cả tin tức" />
+              <CInput label="Chữ nút card tin tức" value={cms.home?.news?.cardButtonText} onChange={(v) => updateCms("home.news.cardButtonText", v)} placeholder="VD: Đọc thêm" />
+            </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              <ColorPicker label="Màu nền khối" value={cms.home?.news?.sectionBgColor} onChange={(v) => updateCms("home.news.sectionBgColor", v)} />
+              <ColorPicker label="Màu tiêu đề" value={cms.home?.news?.titleColor} onChange={(v) => updateCms("home.news.titleColor", v)} />
+              <ColorPicker label="Màu mô tả" value={cms.home?.news?.descriptionColor} onChange={(v) => updateCms("home.news.descriptionColor", v)} />
+              <ColorPicker label="Màu nền nút" value={cms.home?.news?.buttonBgColor} onChange={(v) => updateCms("home.news.buttonBgColor", v)} />
+              <ColorPicker label="Màu chữ nút" value={cms.home?.news?.buttonTextColor} onChange={(v) => updateCms("home.news.buttonTextColor", v)} />
+              <ColorPicker label="Màu chữ nút card" value={cms.home?.news?.cardButtonTextColor} onChange={(v) => updateCms("home.news.cardButtonTextColor", v)} />
+            </div>
+          </Card>
+          <Card title="Khối CTA (Trang chủ)" subtitle="Sửa toàn bộ chữ/nút/màu của khối kêu gọi hành động">
+            <div className="grid md:grid-cols-2 gap-3">
+              <CInput label="Tiêu đề CTA" value={cms.home?.cta?.title} onChange={(v) => updateCms("home.cta.title", v)} placeholder="VD: Bắt đầu hành trình cờ vua" />
+              <CInput label="Từ highlight tiêu đề" value={cms.home?.cta?.highlightedText} onChange={(v) => updateCms("home.cta.highlightedText", v)} placeholder="VD: ngay hôm nay" />
+              <CInput label="Mô tả CTA" value={cms.home?.cta?.description} onChange={(v) => updateCms("home.cta.description", v)} placeholder="Mô tả dưới tiêu đề CTA" />
+              <CInput label="Tên nút chính" value={cms.home?.cta?.primaryButtonText} onChange={(v) => updateCms("home.cta.primaryButtonText", v)} placeholder="VD: Đăng ký học thử miễn phí" />
+              <CInput label="Tên nút phụ" value={cms.home?.cta?.secondaryButtonText} onChange={(v) => updateCms("home.cta.secondaryButtonText", v)} placeholder="VD: Tìm hiểu thêm" />
+              <CInput label="Badge tin cậy 1" value={cms.home?.cta?.trustItem1} onChange={(v) => updateCms("home.cta.trustItem1", v)} placeholder="VD: Học thử miễn phí" />
+              <CInput label="Badge tin cậy 2" value={cms.home?.cta?.trustItem2} onChange={(v) => updateCms("home.cta.trustItem2", v)} placeholder="VD: Không ràng buộc" />
+              <CInput label="Badge tin cậy 3" value={cms.home?.cta?.trustItem3} onChange={(v) => updateCms("home.cta.trustItem3", v)} placeholder="VD: Hoàn tiền 100%" />
+            </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              <ColorPicker label="Màu nền section CTA" value={cms.home?.cta?.sectionBgColor} onChange={(v) => updateCms("home.cta.sectionBgColor", v)} />
+              <ColorPicker label="Màu nền card CTA" value={cms.home?.cta?.cardBgColor} onChange={(v) => updateCms("home.cta.cardBgColor", v)} />
+              <ColorPicker label="Màu tiêu đề CTA" value={cms.home?.cta?.titleColor} onChange={(v) => updateCms("home.cta.titleColor", v)} />
+              <ColorPicker label="Màu highlight" value={cms.home?.cta?.highlightColor} onChange={(v) => updateCms("home.cta.highlightColor", v)} />
+              <ColorPicker label="Màu mô tả CTA" value={cms.home?.cta?.descriptionColor} onChange={(v) => updateCms("home.cta.descriptionColor", v)} />
+              <ColorPicker label="Màu nền nút chính" value={cms.home?.cta?.primaryButtonBgColor} onChange={(v) => updateCms("home.cta.primaryButtonBgColor", v)} />
+              <ColorPicker label="Màu chữ nút chính" value={cms.home?.cta?.primaryButtonTextColor} onChange={(v) => updateCms("home.cta.primaryButtonTextColor", v)} />
+              <ColorPicker label="Màu chữ nút phụ" value={cms.home?.cta?.secondaryButtonTextColor} onChange={(v) => updateCms("home.cta.secondaryButtonTextColor", v)} />
+              <ColorPicker label="Màu viền nút phụ" value={cms.home?.cta?.secondaryButtonBorderColor} onChange={(v) => updateCms("home.cta.secondaryButtonBorderColor", v)} />
+              <ColorPicker label="Màu chữ badge tin cậy" value={cms.home?.cta?.trustTextColor} onChange={(v) => updateCms("home.cta.trustTextColor", v)} />
+            </div>
+          </Card>
+          <Card title="Khối Liên hệ (Trang chủ)" subtitle="Sửa chữ và màu của khối liên hệ trang chủ">
+            <div className="grid md:grid-cols-2 gap-3">
+              <CInput label="Nhãn badge" value={cms.home?.contact?.badge} onChange={(v) => updateCms("home.contact.badge", v)} placeholder="VD: Liên hệ" />
+              <CInput label="Tiêu đề khối" value={cms.home?.contact?.title} onChange={(v) => updateCms("home.contact.title", v)} placeholder="VD: Đăng ký học thử" />
+              <CInput label="Từ highlight tiêu đề" value={cms.home?.contact?.highlightedText} onChange={(v) => updateCms("home.contact.highlightedText", v)} placeholder="VD: miễn phí" />
+              <CInput label="Mô tả khối" value={cms.home?.contact?.description} onChange={(v) => updateCms("home.contact.description", v)} placeholder="Mô tả dưới tiêu đề khối Liên hệ" />
+              <CInput label="Chữ nút gửi form" value={cms.home?.contact?.submitButtonText} onChange={(v) => updateCms("home.contact.submitButtonText", v)} placeholder="VD: Đăng ký học thử miễn phí" />
+            </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              <ColorPicker label="Màu nền khối" value={cms.home?.contact?.sectionBgColor} onChange={(v) => updateCms("home.contact.sectionBgColor", v)} />
+              <ColorPicker label="Màu nền badge" value={cms.home?.contact?.badgeBgColor} onChange={(v) => updateCms("home.contact.badgeBgColor", v)} />
+              <ColorPicker label="Màu chữ badge" value={cms.home?.contact?.badgeTextColor} onChange={(v) => updateCms("home.contact.badgeTextColor", v)} />
+              <ColorPicker label="Màu tiêu đề" value={cms.home?.contact?.titleColor} onChange={(v) => updateCms("home.contact.titleColor", v)} />
+              <ColorPicker label="Màu highlight" value={cms.home?.contact?.highlightColor} onChange={(v) => updateCms("home.contact.highlightColor", v)} />
+              <ColorPicker label="Màu mô tả" value={cms.home?.contact?.descriptionColor} onChange={(v) => updateCms("home.contact.descriptionColor", v)} />
+              <ColorPicker label="Màu nền nút gửi" value={cms.home?.contact?.submitButtonBgColor} onChange={(v) => updateCms("home.contact.submitButtonBgColor", v)} />
+              <ColorPicker label="Màu chữ nút gửi" value={cms.home?.contact?.submitButtonTextColor} onChange={(v) => updateCms("home.contact.submitButtonTextColor", v)} />
+            </div>
           </Card>
         </div>
       );

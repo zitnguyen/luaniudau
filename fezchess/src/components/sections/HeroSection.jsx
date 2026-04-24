@@ -18,14 +18,14 @@ const HeroSection = () => {
   };
 
   const title = hero?.title || "Phát triển tư duy chiến lược cho thế hệ tương lai";
-  const highlightedText = hero?.highlightedText || "tư duy chiến lược";
+  const highlightedText = cleanText(hero?.highlightedText, "");
   const primaryButtonText = cleanText(hero?.primaryButtonText, "Khám phá khóa học");
   const secondaryButtonText = cleanText(
     hero?.secondaryButtonText,
     "Xem video giới thiệu",
   );
   const secondaryButtonLink = cleanText(hero?.secondaryButtonLink, "");
-  const titleParts = title.includes(highlightedText)
+  const titleParts = highlightedText && title.includes(highlightedText)
     ? title.split(highlightedText)
     : [title, ""];
   const stats = Array.isArray(hero?.stats) && hero.stats.length > 0
@@ -43,6 +43,36 @@ const HeroSection = () => {
       : theme?.fontFamily && theme?.fontFamily !== "inherit"
         ? theme.fontFamily
       : undefined;
+  const parseHexToRgb = (value) => {
+    const hex = String(value || "").trim().replace("#", "");
+    if (!hex) return null;
+    const normalized =
+      hex.length === 3
+        ? hex.split("").map((ch) => ch + ch).join("")
+        : hex.length === 6
+          ? hex
+          : null;
+    if (!normalized) return null;
+    const intVal = Number.parseInt(normalized, 16);
+    if (Number.isNaN(intVal)) return null;
+    return {
+      r: (intVal >> 16) & 255,
+      g: (intVal >> 8) & 255,
+      b: intVal & 255,
+    };
+  };
+  const getContrastTextColor = (backgroundColor) => {
+    const rgb = parseHexToRgb(backgroundColor);
+    if (!rgb) return "#ffffff";
+    const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+    return luminance > 0.6 ? "#0f172a" : "#ffffff";
+  };
+  const secondaryButtonBorderColor =
+    hero?.secondaryButtonBorderColor || cms?.home?.buttonColor || undefined;
+  const secondaryButtonTextColor =
+    hero?.secondaryButtonTextColor ||
+    secondaryButtonBorderColor ||
+    getContrastTextColor(hero?.sectionBgColor || home?.pageBackgroundColor);
 
   return (
     <section
@@ -168,9 +198,8 @@ const HeroSection = () => {
                     whileTap={{ scale: 0.98 }}
                     className="flex items-center justify-center gap-2 px-8 py-4 bg-transparent border-2 border-secondary-foreground/20 text-secondary-foreground rounded-xl font-medium hover:border-primary hover:text-primary transition-colors duration-300"
                     style={{
-                      color: hero?.secondaryButtonTextColor || undefined,
-                      borderColor:
-                        hero?.secondaryButtonBorderColor || cms?.home?.buttonColor || undefined,
+                      color: secondaryButtonTextColor,
+                      borderColor: secondaryButtonBorderColor,
                       borderRadius: theme?.buttonRadius || undefined,
                     }}
                   >
@@ -184,9 +213,8 @@ const HeroSection = () => {
                   whileTap={{ scale: 0.98 }}
                   className="flex items-center justify-center gap-2 px-8 py-4 bg-transparent border-2 border-secondary-foreground/20 text-secondary-foreground rounded-xl font-medium hover:border-primary hover:text-primary transition-colors duration-300"
                   style={{
-                    color: hero?.secondaryButtonTextColor || undefined,
-                    borderColor:
-                      hero?.secondaryButtonBorderColor || cms?.home?.buttonColor || undefined,
+                    color: secondaryButtonTextColor,
+                    borderColor: secondaryButtonBorderColor,
                     borderRadius: theme?.buttonRadius || undefined,
                   }}
                 >

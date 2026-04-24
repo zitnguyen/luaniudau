@@ -6,6 +6,8 @@ const TeacherCard = ({
   image,
   experience,
   specialization,
+  actionButtonBgColor,
+  actionButtonTextColor,
 }) => {
   return (
     <motion.div
@@ -40,6 +42,10 @@ const TeacherCard = ({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
+          style={{
+            backgroundColor: actionButtonBgColor || undefined,
+            color: actionButtonTextColor || undefined,
+          }}
         >
           <span className="text-sm">📧</span>
         </motion.button>
@@ -47,6 +53,10 @@ const TeacherCard = ({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
+          style={{
+            backgroundColor: actionButtonBgColor || undefined,
+            color: actionButtonTextColor || undefined,
+          }}
         >
           <span className="text-sm">📱</span>
         </motion.button>

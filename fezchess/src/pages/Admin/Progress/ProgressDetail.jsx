@@ -135,8 +135,7 @@ const ProgressDetail = () => {
         studentInfo?.fullName || "HocVien",
       );
     } catch (error) {
-      console.error("Error exporting:", error);
-      alert("Lỗi khi xuất file Word");
+      alert(error?.message || "Lỗi khi xuất file Word");
     }
   };
   return (

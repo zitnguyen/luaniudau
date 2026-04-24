@@ -568,6 +568,25 @@ exports.deleteTransaction = asyncHandler(async (req, res) => {
       success: false,
       message: "Không thể xóa học phí tại đây.",
     });
+  } else if (typePrefix === "ORD") {
+    const suffix = String(numericId || "").toUpperCase();
+    const completedOrders = await Order.find({ status: "completed" }).select("_id");
+    const order = completedOrders.find(
+      (item) => String(item._id).slice(-6).toUpperCase() === suffix,
+    );
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy giao dịch đơn hàng khóa học",
+      });
+    }
+    await Order.findByIdAndDelete(order._id);
+    return res.json({ success: true, message: "Xóa giao dịch khóa học thành công" });
+  } else {
+    return res.status(400).json({
+      success: false,
+      message: "Loại giao dịch không hợp lệ.",
+    });
   }
 
   if (!deletedDoc) {

@@ -111,6 +111,7 @@ axiosClient.interceptors.response.use(
   async function (error) {
     const originalRequest = error?.config || {};
     const status = error?.response?.status;
+    const requestUrl = String(originalRequest?.url || "");
 
     // Skip auto-refresh for auth endpoints to avoid loops.
     const isAuthEndpoint = (originalRequest?.url || "").includes("/auth/");
@@ -132,8 +133,12 @@ axiosClient.interceptors.response.use(
       }
     }
 
-    // Any status codes that falls outside the range of 2xx cause this function to trigger
-    console.error('API Error:', error);
+    // Suppress noisy export-progress logs (UI already handles friendly messages).
+    const isProgressExport = requestUrl.includes("/progress/export/");
+    if (!(isProgressExport && status === 404)) {
+      // Any status codes that falls outside the range of 2xx cause this function to trigger
+      console.error('API Error:', error);
+    }
     return Promise.reject(error);
   }
 );

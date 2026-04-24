@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import attendanceService from "../../../../services/attendanceService";
 import classService from "../../../../services/classService";
+import { toast } from "sonner";
 
 const TeacherAttendance = () => {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -107,9 +108,9 @@ const TeacherAttendance = () => {
           }),
         ),
       );
-      alert("Đã lưu điểm danh");
+      toast.success("Đã lưu điểm danh");
     } catch (error) {
-      alert(error?.response?.data?.message || "Lưu điểm danh thất bại");
+      toast.error(error?.response?.data?.message || "Lưu điểm danh thất bại");
     } finally {
       setSaving(false);
     }

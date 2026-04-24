@@ -91,7 +91,7 @@ const ProgressList = () => {
     try {
       await progressService.exportWord(studentId, classId, studentName || 'HocVien');
     } catch (error) {
-      alert(error?.response?.data?.message || 'Xuất file Word thất bại');
+      alert(error?.message || 'Xuất file Word thất bại');
     }
   };
 

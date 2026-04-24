@@ -72,19 +72,41 @@ const ContactSection = () => {
   };
 
   return (
-    <section className="py-20 bg-background" id="contact">
+    <section
+      className="py-20 bg-background"
+      id="contact"
+      style={{ backgroundColor: section?.sectionBgColor || undefined }}
+    >
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left - Info */}
           <ScrollReveal direction="left">
-            <span className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
+            <span
+              className="inline-block px-4 py-2 rounded-full text-sm font-medium mb-4"
+              style={{
+                backgroundColor: section?.badgeBgColor || undefined,
+                color: section?.badgeTextColor || undefined,
+              }}
+            >
               {section?.badge || "Liên hệ"}
             </span>
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+            <h2
+              className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4"
+              style={{ color: section?.titleColor || undefined }}
+            >
               {section?.title || "Đăng ký học thử"}{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-600">miễn phí</span>
+              <span
+                className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-600"
+                style={{
+                  backgroundImage: section?.highlightColor
+                    ? `linear-gradient(to right, ${section.highlightColor}, ${section.highlightColor})`
+                    : undefined,
+                }}
+              >
+                {section?.highlightedText || "miễn phí"}
+              </span>
             </h2>
-            <p className="text-muted-foreground mb-8">
+            <p className="text-muted-foreground mb-8" style={{ color: section?.descriptionColor || undefined }}>
               {section?.description ||
                 "Điền thông tin bên dưới và chúng tôi sẽ liên hệ bạn trong vòng 24 giờ để sắp xếp buổi học thử cho con."}
             </p>
@@ -237,7 +259,11 @@ const ContactSection = () => {
                   type="submit"
                   disabled={isLoading}
                   className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-70"
-                  style={{ borderRadius: theme?.buttonRadius || undefined }}
+                  style={{
+                    borderRadius: theme?.buttonRadius || undefined,
+                    backgroundColor: section?.submitButtonBgColor || undefined,
+                    color: section?.submitButtonTextColor || undefined,
+                  }}
                 >
                   {isLoading ? (
                     <>
@@ -245,7 +271,7 @@ const ContactSection = () => {
                       <span>Đang gửi...</span>
                     </>
                   ) : (
-                    "Đăng ký học thử miễn phí"
+                    section?.submitButtonText || "Đăng ký học thử miễn phí"
                   )}
                 </motion.button>
               </div>

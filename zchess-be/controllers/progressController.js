@@ -1,17 +1,24 @@
 const Progress = require("../models/Progress");
 const Class = require("../models/Class");
+const Student = require("../models/Student");
+const Attendance = require("../models/Attendance");
+const Setting = require("../models/Setting");
 const asyncHandler = require("../middleware/asyncHandler");
+const fs = require("fs");
+const path = require("path");
 const {
   Document,
   Packer,
   Paragraph,
   TextRun,
+  ImageRun,
   Table,
   TableRow,
   TableCell,
   WidthType,
   AlignmentType,
   VerticalAlign,
+  BorderStyle,
 } = require("docx");
 
 const createCell = (
@@ -37,6 +44,32 @@ const sanitizeFilename = (value) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9._-]/g, "_");
+
+const resolveLogoLocalPath = (logoUrl) => {
+  const raw = String(logoUrl || "").trim();
+  if (!raw) return null;
+  if (path.isAbsolute(raw) && fs.existsSync(raw)) return raw;
+  let uploadRelativePath = "";
+  if (raw.startsWith("/uploads/")) {
+    uploadRelativePath = raw.replace("/uploads/", "");
+  } else if (/^https?:\/\//i.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      if (parsed.pathname.startsWith("/uploads/")) {
+        uploadRelativePath = parsed.pathname.replace("/uploads/", "");
+      }
+    } catch {
+      // ignore URL parse error
+    }
+  }
+  if (uploadRelativePath) {
+    const localUploadPath = path.resolve(__dirname, "../uploads", uploadRelativePath);
+    if (fs.existsSync(localUploadPath)) return localUploadPath;
+  }
+  const maybeRelative = path.resolve(process.cwd(), raw.replace(/^\/+/, ""));
+  if (fs.existsSync(maybeRelative)) return maybeRelative;
+  return null;
+};
 
 const ensureTeacherCanAccessStudentInClass = async ({
   teacherId,
@@ -137,7 +170,7 @@ exports.exportProgressReport = asyncHandler(async (req, res) => {
     }
   }
 
-  const progress = await Progress.findOne({ studentId, classId })
+  let progress = await Progress.findOne({ studentId, classId })
     .populate("studentId")
     .populate({
       path: "classId",
@@ -150,7 +183,34 @@ exports.exportProgressReport = asyncHandler(async (req, res) => {
     });
 
   if (!progress) {
-    return res.status(404).json({ message: "Progress record not found" });
+    const [studentDoc, classDoc, attendanceRows] = await Promise.all([
+      Student.findById(studentId),
+      Class.findById(classId).populate("teacherId", "fullName username"),
+      Attendance.find({ studentId, classId }).sort({ date: 1 }).select("_id date"),
+    ]);
+
+    if (!studentDoc || !classDoc) {
+      return res.status(404).json({
+        message: "Không tìm thấy học viên hoặc lớp học để xuất phiếu",
+      });
+    }
+
+    progress = {
+      studentId: studentDoc,
+      classId: classDoc,
+      teacherId: classDoc.teacherId || null,
+      teacherFeedback: {
+        strengths: "",
+        weaknesses: "",
+        improvementPlan: "",
+      },
+      sessions: (attendanceRows || []).map((row) => ({
+        attendanceId: row,
+        content: "",
+        assessment: "",
+      })),
+      createdAt: new Date(),
+    };
   }
 
   const student = progress.studentId || {};
@@ -187,28 +247,95 @@ exports.exportProgressReport = asyncHandler(async (req, res) => {
     const row2Cells = [createCell("NỘI DUNG HỌC", 1500, true)];
     for (let i = 0; i < chunkSize; i++) {
       const session = chunk[i];
-      row2Cells.push(
-        createCell(session ? session.content || "" : "", 2000),
-      );
+      row2Cells.push(createCell(session ? session.content || "" : "", 2000));
     }
     while (row2Cells.length < 5) row2Cells.push(createCell("", 2000));
     tableRows.push(new TableRow({ children: row2Cells }));
   });
+
+  const settings = await Setting.findOne({ singletonKey: "system" }).select(
+    "centerName logoUrl",
+  );
+  const logoPath = resolveLogoLocalPath(settings?.logoUrl);
+  const logoBuffer = logoPath ? fs.readFileSync(logoPath) : null;
 
   const doc = new Document({
     sections: [
       {
         properties: {},
         children: [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: "PHIẾU HỌC TẬP / LEARNING PROGRESS ROLL",
-                bold: true,
-                size: 32,
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: {
+              top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+              bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+              left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+              right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+              insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+              insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    width: { size: 18, type: WidthType.PERCENTAGE },
+                    borders: {
+                      top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                      bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                      left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                      right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                    },
+                    children: [
+                      ...(logoBuffer
+                        ? [
+                            new Paragraph({
+                              alignment: AlignmentType.LEFT,
+                              children: [
+                                new ImageRun({
+                                  data: logoBuffer,
+                                  transformation: { width: 64, height: 64 },
+                                }),
+                              ],
+                            }),
+                          ]
+                        : [new Paragraph({ text: "" })]),
+                    ],
+                  }),
+                  new TableCell({
+                    width: { size: 64, type: WidthType.PERCENTAGE },
+                    borders: {
+                      top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                      bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                      left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                      right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                    },
+                    verticalAlign: VerticalAlign.CENTER,
+                    children: [
+                      new Paragraph({
+                        children: [
+                          new TextRun({
+                            text: "PHIẾU HỌC TẬP",
+                            bold: true,
+                            size: 38,
+                          }),
+                        ],
+                        alignment: AlignmentType.CENTER,
+                      }),
+                    ],
+                  }),
+                  new TableCell({
+                    width: { size: 18, type: WidthType.PERCENTAGE },
+                    borders: {
+                      top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                      bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                      left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                      right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                    },
+                    children: [new Paragraph({ text: "" })],
+                  }),
+                ],
               }),
             ],
-            alignment: AlignmentType.CENTER,
           }),
           new Paragraph({ text: "" }),
           new Paragraph({

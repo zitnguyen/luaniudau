@@ -61,17 +61,32 @@ const TestimonialSection = () => {
   }, []);
 
   return (
-    <section className="py-20 bg-background">
+    <section
+      className="py-20 bg-background"
+      style={{ backgroundColor: section?.sectionBgColor || undefined }}
+    >
       <div className="container mx-auto px-4">
         {/* Header */}
         <ScrollReveal className="text-center mb-16">
-          <span className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
+          <span
+            className="inline-block px-4 py-2 rounded-full text-sm font-medium mb-4"
+            style={{
+              backgroundColor: section?.badgeBgColor || undefined,
+              color: section?.badgeTextColor || undefined,
+            }}
+          >
             {section?.badge || "Phản hồi"}
           </span>
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+          <h2
+            className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4"
+            style={{ color: section?.titleColor || undefined }}
+          >
             {section?.title || "Phụ huynh nói gì về chúng tôi"}
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p
+            className="text-muted-foreground max-w-2xl mx-auto"
+            style={{ color: section?.descriptionColor || undefined }}
+          >
             {section?.description ||
               "Sự tin tưởng và hài lòng của phụ huynh là động lực để chúng tôi không ngừng hoàn thiện."}
           </p>

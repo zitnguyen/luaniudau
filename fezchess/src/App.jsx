@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -79,12 +80,38 @@ import ContactPage from "./pages/public/ContactPage";
 import TeacherPage from "./pages/public/TeacherPage";
 import TeacherDetailPage from "./pages/public/TeacherDetailPage";
 import LearningPage from "./pages/public/LearningPage";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { SystemSettingsProvider } from "./context/SystemSettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { PublicCmsProvider } from "./context/PublicCmsContext";
 
 function App() {
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const originalAlert = window.alert;
+    window.alert = (message) => {
+      const text = String(message || "").trim() || "Có thông báo mới";
+      const lowered = text.toLowerCase();
+      if (
+        lowered.includes("lỗi") ||
+        lowered.includes("thất bại") ||
+        lowered.includes("không thể") ||
+        lowered.includes("không hợp lệ")
+      ) {
+        toast.error(text);
+        return;
+      }
+      if (lowered.includes("thành công") || lowered.includes("đã lưu")) {
+        toast.success(text);
+        return;
+      }
+      toast.message(text);
+    };
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, []);
+
   return (
     <Router>
       <ThemeProvider>

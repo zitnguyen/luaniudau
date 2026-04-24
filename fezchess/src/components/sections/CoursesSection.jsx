@@ -31,17 +31,34 @@ const CoursesSection = () => {
   }, []);
 
   return (
-    <section className="py-20 bg-background">
+    <section
+      className="py-20 bg-background"
+      style={{
+        backgroundColor: section?.sectionBgColor || undefined,
+      }}
+    >
       <div className="container mx-auto px-4">
         {/* Header */}
         <ScrollReveal className="text-center mb-16">
-          <span className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
+          <span
+            className="inline-block px-4 py-2 rounded-full text-sm font-medium mb-4"
+            style={{
+              backgroundColor: section?.badgeBgColor || undefined,
+              color: section?.badgeTextColor || undefined,
+            }}
+          >
             {section?.badge || "Khóa học"}
           </span>
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+          <h2
+            className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4"
+            style={{ color: section?.titleColor || undefined }}
+          >
             {section?.title || "Khóa học phổ biến"}
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p
+            className="text-muted-foreground max-w-2xl mx-auto"
+            style={{ color: section?.descriptionColor || undefined }}
+          >
             {section?.description ||
               "Các khóa học được thiết kế phù hợp với từng trình độ, từ người mới bắt đầu đến kỳ thủ chuyên nghiệp."}
           </p>
@@ -64,6 +81,10 @@ const CoursesSection = () => {
                       students={course.enrolledStudents || 0}
                       rating={5.0}
                       price={course.price === 0 ? "Miễn phí" : `${course.price?.toLocaleString()}đ`}
+                      buttonText={section?.cardButtonText || "Xem chi tiết"}
+                      buttonBgColor={section?.cardButtonBgColor}
+                      buttonTextColor={section?.cardButtonTextColor}
+                      buttonBorderColor={section?.cardButtonBorderColor}
                     />
                   </Link>
                 </ScrollReveal>
@@ -80,7 +101,12 @@ const CoursesSection = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="bg-secondary text-secondary-foreground border border-border px-8 py-3 rounded-xl font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
-              style={{ borderRadius: theme?.buttonRadius || undefined }}
+              style={{
+                borderRadius: theme?.buttonRadius || undefined,
+                backgroundColor: section?.buttonBgColor || undefined,
+                color: section?.buttonTextColor || undefined,
+                borderColor: section?.buttonBorderColor || undefined,
+              }}
             >
               {section?.buttonText || "Xem tất cả khóa học →"}
             </motion.button>
