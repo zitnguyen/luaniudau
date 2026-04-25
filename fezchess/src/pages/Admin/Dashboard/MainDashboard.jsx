@@ -65,8 +65,15 @@ const MainDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // 1. Fetch Students
-      const studentsResponse = await studentService.getAll();
+      const [studentsResponse, enrollmentsResponse, financeStatsRes, financeChartRes] =
+        await Promise.all([
+          studentService.getAll(),
+          enrollmentService.getAll(),
+          financeService.getFinanceStats(),
+          financeService.getFinanceChart(),
+        ]);
+
+      // 1. Students
       const students = Array.isArray(studentsResponse) ? studentsResponse : [];
       setTotalStudents(students.length);
 
@@ -92,8 +99,7 @@ const MainDashboard = () => {
           setStudentGrowth(students.length > 0 ? "+100%" : "0%");
       }
 
-      // 2. Fetch Enrollments
-      const enrollmentsResponse = await enrollmentService.getAll();
+      // 2. Enrollments
       const enrollments = Array.isArray(enrollmentsResponse) ? enrollmentsResponse : [];
       
       const enrollmentsThisMonth = enrollments.filter(e => {
@@ -145,7 +151,6 @@ const MainDashboard = () => {
       }
 
       // 5. Finance Stats & Chart via Service
-      const financeStatsRes = await financeService.getFinanceStats();
       const financeStats = Array.isArray(financeStatsRes?.data)
         ? financeStatsRes.data
         : Array.isArray(financeStatsRes)
@@ -156,7 +161,6 @@ const MainDashboard = () => {
           setRevenueGrowth(financeStats[0].change || "0%");
       }
 
-      const financeChartRes = await financeService.getFinanceChart();
       const financeChart = Array.isArray(financeChartRes?.data)
         ? financeChartRes.data
         : Array.isArray(financeChartRes)

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axiosClient from '../../../../api/axiosClient';
 import { Plus, Video, FileText, Trash2, Swords, RotateCcw, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { Chess } from 'chess.js';
@@ -20,6 +20,7 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
         isFree: false
     });
     const [adminChessGame, setAdminChessGame] = useState(new Chess());
+    const [baseFen, setBaseFen] = useState(new Chess().fen());
     const [fenInput, setFenInput] = useState("");
     const [selectedAdminSquare, setSelectedAdminSquare] = useState(null);
     const [replayStep, setReplayStep] = useState(0);
@@ -45,8 +46,13 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
         return new Chess(sourceGame?.fen?.() || undefined);
     };
 
-    const rebuildGameFromMoves = (moves) => {
-        const rebuilt = new Chess();
+    const rebuildGameFromMoves = (moves, startFen = baseFen) => {
+        let rebuilt;
+        try {
+            rebuilt = startFen ? new Chess(startFen) : new Chess();
+        } catch {
+            rebuilt = new Chess();
+        }
         (Array.isArray(moves) ? moves : []).forEach((san) => {
             try {
                 rebuilt.move(san);
@@ -59,13 +65,13 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
 
     const syncBoardFromMoves = (nextMoves) => {
         const normalizedMoves = Array.isArray(nextMoves) ? nextMoves.filter(Boolean) : [];
-        const rebuiltGame = rebuildGameFromMoves(normalizedMoves);
+        const rebuiltGame = rebuildGameFromMoves(normalizedMoves, baseFen);
         setConfiguredMoves(normalizedMoves);
         setAdminChessGame(rebuiltGame);
         setFenInput(rebuiltGame.fen());
         setFormData((prev) => ({
             ...prev,
-            initialFen: rebuiltGame.fen(),
+            initialFen: baseFen,
             initialPgn: rebuiltGame.pgn(),
             initialMoves: normalizedMoves,
         }));
@@ -76,9 +82,14 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
         try {
-            const canonicalMoves = Array.isArray(configuredMoves) ? configuredMoves : [];
-            const canonicalGame =
-                canonicalMoves.length > 0 ? rebuildGameFromMoves(canonicalMoves) : adminChessGame;
+            const boardHistoryMoves = Array.isArray(adminChessGame?.history?.())
+                ? adminChessGame.history()
+                : [];
+            const canonicalMoves =
+                Array.isArray(configuredMoves) && configuredMoves.length > 0
+                    ? configuredMoves
+                    : boardHistoryMoves;
+            const canonicalGame = rebuildGameFromMoves(canonicalMoves, baseFen);
             const canonicalFen = String(formData.initialFen || canonicalGame.fen() || "").trim();
             const canonicalPgn = String(formData.initialPgn || canonicalGame.pgn() || "").trim();
             const payload =
@@ -103,6 +114,9 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
                     order: lessons.length + 1
                 });
             }
+            if (formData.type === "chess") {
+                alert(`Đã lưu bài cờ với ${canonicalMoves.length} nước đi.`);
+            }
             setIsAdding(false);
             setEditingLessonId(null);
             setFormData({
@@ -118,6 +132,7 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
                 isFree: false,
             });
             setAdminChessGame(new Chess());
+            setBaseFen(new Chess().fen());
             setFenInput("");
             setReplayStep(0);
             setConfiguredMoves([]);
@@ -151,6 +166,7 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
         setFormData(nextFormData);
 
         if (nextFormData.type === "chess") {
+            let detectedBaseFen = nextFormData.initialFen || "";
             let nextGame = new Chess();
             if (nextFormData.initialPgn) {
                 try {
@@ -166,7 +182,13 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
                 }
             }
             if (nextGame.history().length === 0 && nextFormData.initialMoves.length > 0) {
-                const replayGame = new Chess();
+                let replayGame;
+                try {
+                    replayGame = detectedBaseFen ? new Chess(detectedBaseFen) : new Chess();
+                } catch {
+                    replayGame = new Chess();
+                    detectedBaseFen = replayGame.fen();
+                }
                 nextFormData.initialMoves.forEach((san) => {
                     try {
                         replayGame.move(san);
@@ -177,6 +199,7 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
                 nextGame = replayGame;
             }
             setAdminChessGame(nextGame);
+            setBaseFen(detectedBaseFen || nextGame.fen());
             setFenInput(nextGame.fen());
             const loadedMoves =
                 Array.isArray(nextFormData.initialMoves) && nextFormData.initialMoves.length > 0
@@ -187,6 +210,7 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
             setSelectedAdminSquare(null);
         } else {
             setAdminChessGame(new Chess());
+            setBaseFen(new Chess().fen());
             setFenInput("");
             setReplayStep(0);
             setConfiguredMoves([]);
@@ -269,6 +293,7 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
     const handleApplyFen = () => {
         try {
             const next = new Chess(fenInput || undefined);
+            setBaseFen(next.fen());
             setAdminChessGame(next);
             setConfiguredMoves(next.history());
             setFormData((prev) => ({
@@ -285,6 +310,7 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
 
     const handleResetAdminBoard = () => {
         const next = new Chess();
+        setBaseFen(next.fen());
         setAdminChessGame(next);
         setFenInput(next.fen());
         setConfiguredMoves([]);
@@ -332,6 +358,26 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
     const handleReplayPrev = () => buildReplayGameByStep(replayStep - 1);
     const handleReplayNext = () => buildReplayGameByStep(replayStep + 1);
 
+    useEffect(() => {
+        if (!isAdding || formData.type !== "chess") return undefined;
+        const onKeyDown = (event) => {
+            const tag = String(event.target?.tagName || "").toLowerCase();
+            const isTypingTarget =
+                tag === "input" || tag === "textarea" || tag === "select" || event.target?.isContentEditable;
+            if (isTypingTarget) return;
+
+            if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                handleReplayPrev();
+            } else if (event.key === "ArrowRight") {
+                event.preventDefault();
+                handleReplayNext();
+            }
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [isAdding, formData.type, replayStep, savedMoveHistory.length]);
+
     return (
         <div className="space-y-3 pl-4 border-l-2 border-gray-100 ml-2">
             {lessons.map((lesson) => (
@@ -372,6 +418,7 @@ const LessonManager = ({ chapterId, courseId, lessons, onUpdate }) => {
                                     setFormData({...formData, type: nextType});
                                     if (nextType === "chess") {
                                         const next = new Chess();
+                                        setBaseFen(next.fen());
                                         setAdminChessGame(next);
                                         setFenInput(next.fen());
                                         setConfiguredMoves([]);

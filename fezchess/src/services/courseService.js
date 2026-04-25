@@ -60,6 +60,12 @@ const courseService = {
   getLessonById: async (id) => {
       return await axiosClient.get(`/lessons/${id}`);
   },
+  getNextLesson: async (id) => {
+      return await axiosClient.get(`/lessons/${id}/next`);
+  },
+  getPrevLesson: async (id) => {
+      return await axiosClient.get(`/lessons/${id}/prev`);
+  },
   getMyLessonChessProgress: async (lessonId) => {
       return await axiosClient.get(`/lessons/${lessonId}/chess-progress`);
   },

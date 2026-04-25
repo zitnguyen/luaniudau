@@ -6,6 +6,7 @@ import PageTransition from './PageTransition';
 
 const PublicLayout = () => {
     const location = useLocation();
+    const isLearningPage = location.pathname.startsWith("/learning/");
 
     React.useEffect(() => {
         window.scrollTo({ top: 0, behavior: "auto" });
@@ -13,13 +14,21 @@ const PublicLayout = () => {
 
     return (
         <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-grow">
-                <PageTransition>
+            {isLearningPage ? (
+                <main className="flex-grow">
                     <Outlet />
-                </PageTransition>
-            </main>
-            <Footer />
+                </main>
+            ) : (
+                <>
+                    <Header />
+                    <main className="flex-grow">
+                        <PageTransition>
+                            <Outlet />
+                        </PageTransition>
+                    </main>
+                    <Footer />
+                </>
+            )}
         </div>
     );
 };

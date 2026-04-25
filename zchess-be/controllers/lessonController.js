@@ -153,3 +153,111 @@ exports.saveMyChessProgress = asyncHandler(async (req, res) => {
   );
   return res.json(progress);
 });
+
+exports.getNextLesson = asyncHandler(async (req, res) => {
+  const lesson = await Lesson.findById(req.params.id).select("_id courseId");
+  if (!lesson) {
+    return res.status(404).json({ message: "Bài học không tồn tại" });
+  }
+
+  const chapters = await Chapter.find({ courseId: lesson.courseId })
+    .select("_id order")
+    .sort({ order: 1, _id: 1 })
+    .lean();
+  if (!chapters.length) {
+    return res.json({ nextLesson: null });
+  }
+
+  const chapterIds = chapters.map((chapter) => chapter._id);
+  const lessons = await Lesson.find({ chapterId: { $in: chapterIds } })
+    .select("_id title chapterId order")
+    .sort({ order: 1, _id: 1 })
+    .lean();
+
+  const chapterOrder = new Map(
+    chapters.map((chapter, index) => [String(chapter._id), Number(chapter.order ?? index)]),
+  );
+
+  const orderedLessons = lessons
+    .slice()
+    .sort((a, b) => {
+      const chapterDiff =
+        (chapterOrder.get(String(a.chapterId)) ?? 0) -
+        (chapterOrder.get(String(b.chapterId)) ?? 0);
+      if (chapterDiff !== 0) return chapterDiff;
+      const lessonDiff = Number(a.order ?? 0) - Number(b.order ?? 0);
+      if (lessonDiff !== 0) return lessonDiff;
+      return String(a._id).localeCompare(String(b._id));
+    });
+
+  const currentIndex = orderedLessons.findIndex(
+    (item) => String(item._id) === String(lesson._id),
+  );
+  if (currentIndex < 0 || currentIndex >= orderedLessons.length - 1) {
+    return res.json({ nextLesson: null });
+  }
+
+  const next = orderedLessons[currentIndex + 1];
+  return res.json({
+    nextLesson: next
+      ? {
+          _id: next._id,
+          title: next.title || "Bài học tiếp theo",
+        }
+      : null,
+  });
+});
+
+exports.getPrevLesson = asyncHandler(async (req, res) => {
+  const lesson = await Lesson.findById(req.params.id).select("_id courseId");
+  if (!lesson) {
+    return res.status(404).json({ message: "Bài học không tồn tại" });
+  }
+
+  const chapters = await Chapter.find({ courseId: lesson.courseId })
+    .select("_id order")
+    .sort({ order: 1, _id: 1 })
+    .lean();
+  if (!chapters.length) {
+    return res.json({ prevLesson: null });
+  }
+
+  const chapterIds = chapters.map((chapter) => chapter._id);
+  const lessons = await Lesson.find({ chapterId: { $in: chapterIds } })
+    .select("_id title chapterId order")
+    .sort({ order: 1, _id: 1 })
+    .lean();
+
+  const chapterOrder = new Map(
+    chapters.map((chapter, index) => [String(chapter._id), Number(chapter.order ?? index)]),
+  );
+
+  const orderedLessons = lessons
+    .slice()
+    .sort((a, b) => {
+      const chapterDiff =
+        (chapterOrder.get(String(a.chapterId)) ?? 0) -
+        (chapterOrder.get(String(b.chapterId)) ?? 0);
+      if (chapterDiff !== 0) return chapterDiff;
+      const lessonDiff = Number(a.order ?? 0) - Number(b.order ?? 0);
+      if (lessonDiff !== 0) return lessonDiff;
+      return String(a._id).localeCompare(String(b._id));
+    });
+
+  const currentIndex = orderedLessons.findIndex(
+    (item) => String(item._id) === String(lesson._id),
+  );
+  if (currentIndex <= 0) {
+    return res.json({ prevLesson: null });
+  }
+
+  const prev = orderedLessons[currentIndex - 1];
+  return res.json({
+    prevLesson: prev
+      ? {
+          _id: prev._id,
+          title: prev.title || "Bài học trước",
+        }
+      : null,
+  });
+});

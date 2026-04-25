@@ -176,7 +176,7 @@ exports.createStudent = asyncHandler(async (req, res) => {
 });
 
 exports.getAllStudents = asyncHandler(async (req, res) => {
-  const { parentId, keyword, includeDeleted } = req.query;
+  const { parentId, keyword, includeDeleted, page, limit } = req.query;
   const filter = {
     isDeleted: includeDeleted === "true" ? { $in: [true, false] } : { $ne: true },
   };
@@ -186,14 +186,40 @@ exports.getAllStudents = asyncHandler(async (req, res) => {
     filter.fullName = { $regex: keyword, $options: "i" };
   }
 
-  const students = await Student.find(filter)
+  const baseQuery = Student.find(filter)
     .populate("parentId", "fullName email phone")
     .populate("teacherId", "fullName username email phone")
     .sort("-createdAt");
 
+  const hasPagination = page !== undefined || limit !== undefined;
+  if (!hasPagination) {
+    const students = await baseQuery;
+    return sendSuccess(res, {
+      data: students,
+      message: "Lấy danh sách học viên thành công",
+    });
+  }
+
+  const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+  const limitNumber = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 200);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const [students, total] = await Promise.all([
+    baseQuery.skip(skip).limit(limitNumber),
+    Student.countDocuments(filter),
+  ]);
+
   return sendSuccess(res, {
-    data: students,
-    message: "Lấy danh sách học viên thành công",
+    data: {
+      items: students,
+      pagination: {
+        page: pageNumber,
+        limit: limitNumber,
+        total,
+        totalPages: Math.ceil(total / limitNumber) || 1,
+      },
+    },
+    message: "Lấy danh sách học viên thành công (phân trang)",
   });
 });
 

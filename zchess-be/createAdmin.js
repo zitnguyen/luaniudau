@@ -1,46 +1,28 @@
-const mongoose = require('mongoose');
-const User = require('./models/User');
-const dotenv = require('dotenv');
+require("dotenv").config();
+const mongoose = require("mongoose");
+const User = require("./models/User");
 
-dotenv.config();
+mongoose.connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/adhs").then(async () => {
+  console.log("Connected to MongoDB");
 
-const createAdmin = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB Connected');
-
-    const adminEmail = 'admin@chess.com';
-    const adminPassword = '123456'; 
-
-    let admin = await User.findOne({ email: adminEmail });
-
-    if (admin) {
-      console.log('Admin account found. Updating password...');
-      admin.password = adminPassword; // Pre-save hook will hash this
-      await admin.save();
-      console.log('Admin password updated successfully.');
-    } else {
-      console.log('Creating new admin account...');
-      admin = await User.create({
-        username: 'admin',
-        fullName: 'Administrator',
-        email: adminEmail,
-        password: adminPassword,
-        role: 'Admin',
-        phone: '0987654321'
-      });
-      console.log('Admin account created successfully.');
-    }
-
-    console.log(`\nLogin Credentials:`);
-    console.log(`Email: ${adminEmail}`);
-    console.log(`Password: ${adminPassword}`);
-
-    process.exit();
-  } catch (error) {
-    console.error('Error:', error);
-    process.exit(1);
+  const existingAdmin = await User.findOne({ username: "admin" });
+  if (existingAdmin) {
+    console.log("Admin account already exists. Updating password...");
+    existingAdmin.password = "123456";
+    await existingAdmin.save();
+    console.log("Admin account password updated.");
+  } else {
+    const adminUser = new User({
+      username: "admin",
+      password: "123456",
+      role: "Admin",
+      fullName: "System Admin"
+    });
+    await adminUser.save();
+    console.log("Admin account created.");
   }
-};
-
-createAdmin();
+  process.exit(0);
+}).catch(err => {
+  console.error("Connection error", err);
+  process.exit(1);
+});

@@ -5,16 +5,28 @@ import { toast } from "sonner";
 import studentService from "../../../services/studentService";
 import parentService from "../../../services/parentService";
 import authService from "../../../services/authService";
-import {
-  STUDENT_SKILL_LEVELS,
-  getSkillLevelLabel,
-} from "../../../utils/studentLevel";
+import formMetadataService from "../../../services/formMetadataService";
+import DynamicFormFields from "../../../components/forms/DynamicFormFields";
+import { validateRequiredFields } from "../../../utils/formValidation";
 
 const normalizeRole = (role) =>
   String(role || "")
     .trim()
     .toLowerCase();
 const isAdminUser = (user) => normalizeRole(user?.role) === "admin";
+
+const FALLBACK_STUDENT_FIELDS = [
+  { name: "fullName", label: "Họ và tên", type: "text", required: true },
+  { name: "dateOfBirth", label: "Ngày sinh", type: "date", required: false },
+  { name: "enrollmentDate", label: "Ngày nhập học", type: "date", required: false },
+  { name: "skillLevel", label: "Level", type: "select", required: false, options: [] },
+  { name: "gender", label: "Giới tính", type: "select", required: false, options: [] },
+  { name: "phone", label: "SĐT", type: "text", required: false },
+  { name: "address", label: "Địa chỉ", type: "text", required: false },
+  { name: "parentId", label: "Phụ huynh", type: "select", required: true, optionsSource: "parents" },
+  { name: "totalSessions", label: "Tổng số buổi", type: "number", required: false },
+  { name: "completedLessons", label: "Số buổi đã học", type: "number", required: false },
+];
 
 const StudentForm = () => {
   const navigate = useNavigate();
@@ -25,7 +37,9 @@ const StudentForm = () => {
 
   const [loading, setLoading] = useState(isEditMode);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
   const [parents, setParents] = useState([]);
+  const [fieldConfigs, setFieldConfigs] = useState([]);
   const [meta, setMeta] = useState({
     totalLessons: 0,
     completedLessons: 0,
@@ -55,9 +69,20 @@ const StudentForm = () => {
     let mounted = true;
     const bootstrap = async () => {
       try {
-        const parentList = await parentService.getAll();
+        const [parentList, metadata] = await Promise.all([
+          parentService.getAll(),
+          formMetadataService.getFormConfig(
+            "student",
+            isEditMode ? "update" : "create",
+          ),
+        ]);
         if (!mounted) return;
         setParents(Array.isArray(parentList) ? parentList : []);
+        setFieldConfigs(
+          Array.isArray(metadata?.fields) && metadata.fields.length > 0
+            ? metadata.fields
+            : FALLBACK_STUDENT_FIELDS,
+        );
 
         if (isEditMode) {
           setLoading(true);
@@ -92,6 +117,9 @@ const StudentForm = () => {
           }));
         }
       } catch (error) {
+        if (mounted) {
+          setFieldConfigs(FALLBACK_STUDENT_FIELDS);
+        }
         toast.error(
           error?.response?.data?.message || "Không tải được dữ liệu học viên",
         );
@@ -107,6 +135,7 @@ const StudentForm = () => {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    setErrors((prev) => ({ ...prev, [name]: "" }));
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -114,12 +143,10 @@ const StudentForm = () => {
     event.preventDefault();
     if (!isAdmin) return;
 
-    if (!formData.fullName.trim()) {
-      toast.error("Vui lòng nhập họ tên học viên");
-      return;
-    }
-    if (!formData.parentId) {
-      toast.error("Vui lòng chọn phụ huynh");
+    const requiredErrors = validateRequiredFields(fieldConfigs, formData);
+    if (Object.keys(requiredErrors).length > 0) {
+      setErrors(requiredErrors);
+      toast.error("Vui lòng nhập đầy đủ các trường bắt buộc");
       return;
     }
 
@@ -221,162 +248,22 @@ const StudentForm = () => {
         className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm space-y-6"
       >
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Họ và tên *
-            </label>
-            <input
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ngày sinh
-            </label>
-            <input
-              type="date"
-              name="dateOfBirth"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ngày nhập học
-            </label>
-            <input
-              type="date"
-              name="enrollmentDate"
-              value={formData.enrollmentDate}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Level
-            </label>
-            <select
-              name="skillLevel"
-              value={formData.skillLevel}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">-- Chọn level --</option>
-              {STUDENT_SKILL_LEVELS.map((lvl) => (
-                <option key={lvl} value={lvl}>
-                  {getSkillLevelLabel(lvl)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Giới tính
-            </label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">-- Chọn giới tính --</option>
-              <option value="male">Nam</option>
-              <option value="female">Nữ</option>
-              <option value="other">Khác</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              SĐT
-            </label>
-            <input
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="090..."
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Địa chỉ
-            </label>
-            <input
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="Địa chỉ học viên"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Parent *
-            </label>
-            <select
-              name="parentId"
-              value={formData.parentId}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              required
-            >
-              <option value="">-- Chọn phụ huynh --</option>
-              {parents.map((parent) => (
-                <option key={parent._id} value={parent._id}>
-                  {parent.fullName} - {parent.phone || "N/A"}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tổng số buổi
-            </label>
-            <input
-              type="number"
-              min={0}
-              name="totalSessions"
-              value={formData.totalSessions}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Số buổi đã học
-            </label>
-            <input
-              type="number"
-              min={0}
-              name="completedLessons"
-              value={formData.completedLessons}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-
-          {isEditMode && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Trạng thái
-              </label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="active">Đang học</option>
-                <option value="completed">Hoàn thành</option>
-              </select>
-            </div>
-          )}
+          <DynamicFormFields
+            fields={fieldConfigs.map((field) => ({
+              ...field,
+              fullWidth: field.name === "address",
+              options:
+                field.optionsSource === "parents"
+                  ? parents.map((parent) => ({
+                      value: parent._id,
+                      label: `${parent.fullName} - ${parent.phone || "N/A"}`,
+                    }))
+                  : field.options,
+            }))}
+            values={formData}
+            errors={errors}
+            onChange={handleChange}
+          />
         </section>
 
         <div className="flex justify-end gap-3 pt-2">

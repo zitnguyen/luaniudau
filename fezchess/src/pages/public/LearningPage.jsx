@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import courseService from '../../services/courseService';
-import { ArrowLeft, FileText, Save, RotateCcw, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, FileText, Save, RotateCcw, ExternalLink, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 
@@ -18,6 +18,9 @@ const LearningPage = () => {
     const [invalidMoveMessage, setInvalidMoveMessage] = useState("");
     const [selectedSquare, setSelectedSquare] = useState(null);
     const [replayStep, setReplayStep] = useState(0);
+    const [nextLesson, setNextLesson] = useState(null);
+    const [prevLesson, setPrevLesson] = useState(null);
+    const chessViewportRef = useRef(null);
 
     const swapTurnInFen = (fen) => {
         const parts = String(fen || "").split(" ");
@@ -55,6 +58,59 @@ const LearningPage = () => {
             }
         };
         fetchLesson();
+    }, [lessonId]);
+
+    useEffect(() => {
+        if (!lessonId) return;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }, [lessonId]);
+
+    useEffect(() => {
+        const resolveNextLesson = async () => {
+            if (!lessonId) {
+                setNextLesson(null);
+                return;
+            }
+            try {
+                const nextData = await courseService.getNextLesson(lessonId);
+                const upcoming = nextData?.nextLesson || null;
+                setNextLesson(
+                    upcoming
+                        ? {
+                              _id: upcoming._id,
+                              title: upcoming.title || "Bài học tiếp theo",
+                          }
+                        : null,
+                );
+            } catch {
+                setNextLesson(null);
+            }
+        };
+        resolveNextLesson();
+    }, [lessonId]);
+
+    useEffect(() => {
+        const resolvePrevLesson = async () => {
+            if (!lessonId) {
+                setPrevLesson(null);
+                return;
+            }
+            try {
+                const prevData = await courseService.getPrevLesson(lessonId);
+                const previous = prevData?.prevLesson || null;
+                setPrevLesson(
+                    previous
+                        ? {
+                              _id: previous._id,
+                              title: previous.title || "Bài học trước",
+                          }
+                        : null,
+                );
+            } catch {
+                setPrevLesson(null);
+            }
+        };
+        resolvePrevLesson();
     }, [lessonId]);
 
     useEffect(() => {
@@ -210,8 +266,20 @@ const LearningPage = () => {
     };
 
     const isInternalChessLesson = lesson?.type === "chess" && lesson?.chessMode === "internal";
+    const isChessLesson = lesson?.type === "chess";
     const replayMoves = Array.isArray(lesson?.initialMoves) ? lesson.initialMoves : [];
-    const isReplayMode = isInternalChessLesson;
+    const isReplayMode = isInternalChessLesson && replayMoves.length > 0;
+
+    useEffect(() => {
+        if (!isChessLesson) return;
+        const id = window.setTimeout(() => {
+            chessViewportRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        }, 80);
+        return () => window.clearTimeout(id);
+    }, [lesson?._id, isChessLesson]);
 
     const buildReplayGame = (targetStep) => {
         let baseGame;
@@ -243,6 +311,26 @@ const LearningPage = () => {
         setGame(baseGame);
         setCurrentFen(baseGame.fen());
     };
+
+    useEffect(() => {
+        if (!isReplayMode) return undefined;
+        const onKeyDown = (event) => {
+            const tag = String(event.target?.tagName || "").toLowerCase();
+            const isTypingTarget =
+                tag === "input" || tag === "textarea" || tag === "select" || event.target?.isContentEditable;
+            if (isTypingTarget) return;
+
+            if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                handleReplayPrev();
+            } else if (event.key === "ArrowRight") {
+                event.preventDefault();
+                handleReplayNext();
+            }
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [isReplayMode, replayStep, replayMoves.length, lesson?._id]);
 
     const chessboardOptions = useMemo(
         () => ({
@@ -292,11 +380,12 @@ const LearningPage = () => {
             </header>
 
             {/* Main Content Area */}
-            <div className="flex-1 overflow-auto p-8 flex justify-center">
-                <div className="w-full max-w-4xl">
+            <div className={`flex-1 ${isChessLesson ? "overflow-hidden p-4 md:p-5" : "overflow-auto p-8"} flex justify-center`}>
+                <div className={`w-full ${isChessLesson ? "max-w-6xl h-full flex flex-col min-h-0" : "max-w-4xl"}`}>
                     <div
-                        className={`bg-black rounded-xl overflow-hidden shadow-2xl mb-8 relative ${
-                            lesson.type === "chess" ? "min-h-[640px]" : "aspect-video"
+                        ref={isChessLesson ? chessViewportRef : null}
+                        className={`bg-black rounded-xl overflow-hidden shadow-2xl relative ${
+                            lesson.type === "chess" ? "flex-1 min-h-0 mb-4" : "aspect-video mb-8"
                         }`}
                     >
                         {lesson.type === 'video' && lesson.content ? (
@@ -386,7 +475,10 @@ const LearningPage = () => {
                                     </div>
                                     <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
                                         <div className="w-full h-full flex items-center justify-center bg-slate-950 rounded-lg p-2">
-                                            <div className="w-full max-w-[420px] md:max-w-[520px]">
+                                            <div
+                                                className="w-full"
+                                                style={{ maxWidth: "min(56vh, 520px)" }}
+                                            >
                                                 <Chessboard options={chessboardOptions} />
                                             </div>
                                         </div>
@@ -423,6 +515,7 @@ const LearningPage = () => {
                         )}
                     </div>
 
+                    {(!isChessLesson || lesson.description || (lesson.chessMode === "external" || isLichessLink(lesson.content))) && (
                     <div className="prose prose-invert max-w-none">
                         <h2 className="text-2xl font-bold mb-4">Nội dung bài học</h2>
                         {lesson.type !== 'video' && lesson.type !== 'chess' && (
@@ -440,6 +533,53 @@ const LearningPage = () => {
                             </a>
                         )}
                         {lesson.description && <p>{lesson.description}</p>}
+                    </div>
+                    )}
+
+                    <div className={`${isChessLesson ? "mt-3" : "mt-8"} flex justify-between`}>
+                        {prevLesson ? (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigate(`/learning/${courseSlug}/${prevLesson._id}`)
+                                }
+                                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                                title={`Về ${prevLesson.title}`}
+                            >
+                                <ArrowLeft size={16} />
+                                Bài học trước
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                disabled
+                                className="inline-flex items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 cursor-not-allowed"
+                            >
+                                Đã là bài đầu
+                            </button>
+                        )}
+
+                        {nextLesson ? (
+                          <button
+                              type="button"
+                              onClick={() =>
+                                  navigate(`/learning/${courseSlug}/${nextLesson._id}`)
+                              }
+                              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                              title={`Sang ${nextLesson.title}`}
+                          >
+                              Bài học tiếp theo
+                              <ArrowRight size={16} />
+                          </button>
+                        ) : (
+                          <button
+                              type="button"
+                              disabled
+                              className="inline-flex items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 cursor-not-allowed"
+                          >
+                              Đã là bài cuối
+                          </button>
+                        )}
                     </div>
                 </div>
             </div>

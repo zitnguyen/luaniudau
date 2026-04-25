@@ -1,14 +1,36 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Edit, Eye, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, Eye, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import TableSkeleton from "../../../components/ui/TableSkeleton";
 import studentService from "../../../services/studentService";
 import authService from "../../../services/authService";
 import useUndoDelete from "../../../hooks/useUndoDelete";
+import formMetadataService from "../../../services/formMetadataService";
+import DynamicFormFields from "../../../components/forms/DynamicFormFields";
 
 const normalizeRole = (role) => String(role || "").trim().toLowerCase();
 const isAdminUser = (user) => normalizeRole(user?.role) === "admin";
+const FALLBACK_FILTER_FIELDS = [
+  {
+    name: "keyword",
+    label: "Từ khóa",
+    type: "text",
+    required: false,
+    placeholder: "Tìm theo tên học viên hoặc phụ huynh",
+  },
+  {
+    name: "status",
+    label: "Trạng thái",
+    type: "select",
+    required: false,
+    options: [
+      { value: "all", label: "Tất cả trạng thái" },
+      { value: "active", label: "Đang học" },
+      { value: "completed", label: "Hoàn thành" },
+    ],
+  },
+];
 
 const getStudentStatus = (student) => {
   const total = Number(student?.totalLessons ?? student?.totalSessions ?? 0);
@@ -43,8 +65,8 @@ const StudentList = () => {
   const isAdmin = isAdminUser(currentUser);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [filterConfig, setFilterConfig] = useState([]);
+  const [filters, setFilters] = useState({ keyword: "", status: "all" });
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [highlightedRowId, setHighlightedRowId] = useState(null);
   const { scheduleUndoDelete } = useUndoDelete();
@@ -58,11 +80,20 @@ const StudentList = () => {
     const run = async () => {
       try {
         setLoading(true);
-        const data = await studentService.getAll();
+        const [data, metadata] = await Promise.all([
+          studentService.getAll(),
+          formMetadataService.getFormConfig("student", "filter"),
+        ]);
         if (!mounted) return;
         setStudents(Array.isArray(data) ? data : []);
+        setFilterConfig(
+          Array.isArray(metadata?.fields) && metadata.fields.length > 0
+            ? metadata.fields
+            : FALLBACK_FILTER_FIELDS,
+        );
       } catch (error) {
         if (!mounted) return;
+        setFilterConfig(FALLBACK_FILTER_FIELDS);
         toast.error(error?.response?.data?.message || "Không tải được danh sách học viên");
       } finally {
         if (mounted) setLoading(false);
@@ -90,17 +121,24 @@ const StudentList = () => {
   }, [location.state?.createdAt]);
 
   const filteredStudents = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+      const term = String(filters.keyword || "")
+        .trim()
+        .toLowerCase();
     return students.filter((student) => {
       const status = getStudentStatus(student).value;
-      if (statusFilter !== "all" && status !== statusFilter) return false;
+        if (filters.status !== "all" && status !== filters.status) return false;
       if (!term) return true;
       return (
         String(student?.fullName || "").toLowerCase().includes(term) ||
         String(student?.parentId?.fullName || "").toLowerCase().includes(term)
       );
     });
-  }, [students, searchTerm, statusFilter]);
+  }, [students, filters]);
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleDelete = (studentId) => {
     const deletingStudent = students.find((item) => item._id === studentId);
@@ -146,24 +184,16 @@ const StudentList = () => {
       </div>
 
       <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            placeholder="Tìm theo tên học viên hoặc phụ huynh"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <DynamicFormFields
+              fields={filterConfig}
+              values={filters}
+              errors={{}}
+              onChange={handleFilterChange}
+            />
+          </div>
         </div>
-        <select
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">Tất cả trạng thái</option>
-          <option value="active">Đang học</option>
-          <option value="completed">Hoàn thành</option>
-        </select>
       </div>
 
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">

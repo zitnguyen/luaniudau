@@ -40,6 +40,7 @@ const testimonialRoutes = require("./routes/testimonialRoutes");
 const heroSettingRoutes = require("./routes/heroSettingRoutes");
 const lichessRoutes = require("./routes/lichessRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const formMetadataRoutes = require("./routes/formMetadataRoutes");
 
 const errorHandler = require("./middleware/errorMiddleware");
 const { apiLimiter } = require("./middleware/securityMiddleware");
@@ -106,6 +107,7 @@ app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/hero-settings", heroSettingRoutes);
 app.use("/api/lichess", lichessRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/form-metadata", formMetadataRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

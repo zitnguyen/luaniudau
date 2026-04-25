@@ -57,10 +57,33 @@ exports.listEnrollments = asyncHandler(async (req, res) => {
     }
   }
 
-  const enrollments = await populateEnrollment(
-    Enrollment.find(filter).sort("-enrollmentDate"),
-  );
-  res.json(enrollments);
+  const { page, limit } = req.query;
+  const hasPagination = page !== undefined || limit !== undefined;
+  const baseQuery = Enrollment.find(filter).sort("-enrollmentDate");
+
+  if (!hasPagination) {
+    const enrollments = await populateEnrollment(baseQuery);
+    return res.json(enrollments);
+  }
+
+  const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+  const limitNumber = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 200);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const [enrollments, total] = await Promise.all([
+    populateEnrollment(baseQuery.skip(skip).limit(limitNumber)),
+    Enrollment.countDocuments(filter),
+  ]);
+
+  res.json({
+    items: enrollments,
+    pagination: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPages: Math.ceil(total / limitNumber) || 1,
+    },
+  });
 });
 
 exports.getEnrollmentById = asyncHandler(async (req, res) => {
