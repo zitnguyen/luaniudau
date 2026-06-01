@@ -10,5 +10,7 @@ router.post('/', protect, authorize("Admin"), parentController.createParent);
 router.put('/:id', protect, authorize("Admin", "Parent"), validateObjectIdParam("id"), parentController.updateParent);
 router.delete('/:id', protect, authorize("Admin"), validateObjectIdParam("id"), parentController.deleteParent);
 router.get('/:id/students', protect, authorize("Admin", "Parent"), validateObjectIdParam("id"), parentController.getParentStudents);
+router.get('/:id/password', protect, authorize("Admin"), validateObjectIdParam("id"), parentController.getParentPassword);
+router.put('/:id/reset-password', protect, authorize("Admin"), validateObjectIdParam("id"), parentController.resetParentPassword);
 
 module.exports = router;

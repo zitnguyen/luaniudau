@@ -26,8 +26,6 @@ const userSchema = new mongoose.Schema(
 
     phone: {
       type: String,
-      unique: true,
-      sparse: true,
       trim: true,
     },
     avatarUrl: {
@@ -39,6 +37,12 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
+    },
+
+    /** Mật khẩu dạng plain-text — chỉ Admin đọc (lưu để hỗ trợ phụ huynh quên mật khẩu) */
+    plainPassword: {
+      type: String,
+      default: "",
     },
 
     role: {
@@ -62,6 +66,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
       index: true,
+    },
+    inactivityNotifiedAt: {
+      type: Date,
+      default: null,
     },
     /** Elo cờ nhanh / đối kháng — khởi điểm 100 (tương tự ý tưởng rating Lichess) */
     elo: {

@@ -3,6 +3,7 @@ const Parent = require("../models/Parents");
 const User = require("../models/User");
 const Student = require("../models/Student");
 const asyncHandler = require("../middleware/asyncHandler");
+const { ok, created, deleted, fail } = require("../utils/apiResponse");
 
 const PARENT_UPDATABLE_FIELDS = ["fullName", "email", "phone", "address", "avatarUrl"];
 
@@ -17,26 +18,25 @@ const pickParentPatch = (body = {}) => {
 };
 
 const generateTempPassword = () => {
-  // 12 ký tự alphanum, đủ entropy cho temp password và bắt đổi sau khi đăng nhập đầu.
-  return crypto.randomBytes(9).toString("base64").replace(/[+/=]/g, "").slice(0, 12);
+  return "zchesscenter";
 };
 
 exports.getAllParents = asyncHandler(async (req, res) => {
   const parents = await User.find({ role: { $regex: /^parent$/i } });
-  res.json(parents);
+  return ok(res, parents);
 });
 
 exports.getParentById = asyncHandler(async (req, res) => {
   if (req.user?.role === "Parent" && String(req.user._id) !== String(req.params.id)) {
-    return res.status(403).json({ message: "Forbidden" });
+    return fail(res, "Forbidden", 403);
   }
   const parent = await User.findOne({
     _id: req.params.id,
     role: { $regex: /^parent$/i },
   });
   if (!parent)
-    return res.status(404).json({ message: "Không tìm thấy phụ huynh" });
-  res.json(parent);
+    return fail(res, "Không tìm thấy phụ huynh", 404);
+  return ok(res, parent);
 });
 
 exports.createParent = asyncHandler(async (req, res) => {
@@ -52,17 +52,16 @@ exports.createParent = asyncHandler(async (req, res) => {
 
   if (existingUser) {
     if (existingUser.phone === phone)
-      return res.status(400).json({ message: "Số điện thoại này đã được đăng ký" });
+      return fail(res, "Số điện thoại này đã được đăng ký", 400);
     if (existingUser.email === emailToUse)
-      return res.status(400).json({ message: "Email này đã được sử dụng" });
-    return res
-      .status(400)
-      .json({ message: "Phụ huynh với số điện thoại hoặc email này đã tồn tại" });
+      return fail(res, "Email này đã được sử dụng", 400);
+    return fail(res, "Phụ huynh với số điện thoại hoặc email này đã tồn tại", 400);
   }
 
   const parent = new Parent({
     username,
     password,
+    plainPassword: password,
     fullName,
     phone,
     email: emailToUse,
@@ -76,13 +75,13 @@ exports.createParent = asyncHandler(async (req, res) => {
     const payload = parent.toObject ? parent.toObject() : { ...parent };
     delete payload.password;
     payload.tempPassword = password;
-    res.status(201).json(payload);
+    return created(res, payload);
   } catch (err) {
     if (err.code === 11000) {
       if (err.keyPattern?.phone)
-        return res.status(400).json({ message: "Số điện thoại này đã được đăng ký" });
+        return fail(res, "Số điện thoại này đã được đăng ký", 400);
       if (err.keyPattern?.email)
-        return res.status(400).json({ message: "Email này đã được sử dụng" });
+        return fail(res, "Email này đã được sử dụng", 400);
     }
     throw err;
   }
@@ -90,7 +89,7 @@ exports.createParent = asyncHandler(async (req, res) => {
 
 exports.updateParent = asyncHandler(async (req, res) => {
   if (req.user?.role === "Parent" && String(req.user._id) !== String(req.params.id)) {
-    return res.status(403).json({ message: "Forbidden" });
+    return fail(res, "Forbidden", 403);
   }
   if (req.body.phone) {
     const duplicate = await User.findOne({
@@ -99,9 +98,7 @@ exports.updateParent = asyncHandler(async (req, res) => {
       role: { $regex: /^parent$/i },
     });
     if (duplicate) {
-      return res
-        .status(400)
-        .json({ message: "Số điện thoại này đã được sử dụng bởi tài khoản khác" });
+      return fail(res, "Số điện thoại này đã được sử dụng bởi tài khoản khác", 400);
     }
   }
 
@@ -114,13 +111,11 @@ exports.updateParent = asyncHandler(async (req, res) => {
       { new: true, runValidators: true },
     );
     if (!parent)
-      return res.status(404).json({ message: "Không tìm thấy phụ huynh" });
-    res.json(parent);
+      return fail(res, "Không tìm thấy phụ huynh", 404);
+    return ok(res, parent);
   } catch (err) {
     if (err.code === 11000 && err.keyPattern?.phone) {
-      return res
-        .status(400)
-        .json({ message: "Số điện thoại này đã được sử dụng bởi tài khoản khác" });
+      return fail(res, "Số điện thoại này đã được sử dụng bởi tài khoản khác", 400);
     }
     throw err;
   }
@@ -132,7 +127,7 @@ exports.deleteParent = asyncHandler(async (req, res) => {
     role: { $regex: /^parent$/i },
   });
   if (!deletedParent) {
-    return res.status(404).json({ message: "Không tìm thấy phụ huynh" });
+    return fail(res, "Không tìm thấy phụ huynh", 404);
   }
 
   await Student.updateMany(
@@ -140,19 +135,42 @@ exports.deleteParent = asyncHandler(async (req, res) => {
     { $set: { isDeleted: true, deletedAt: new Date() } },
   );
 
-  res.json({
-    message: "Đã xóa phụ huynh và các học viên liên quan",
-    deletedId: req.params.id,
+  return ok(res, { deletedId: req.params.id }, "Đã xóa phụ huynh và các học viên liên quan");
+});
+
+exports.getParentPassword = asyncHandler(async (req, res) => {
+  const parent = await User.findOne({
+    _id: req.params.id,
+    role: { $regex: /^parent$/i },
+  }).select("plainPassword");
+  if (!parent) return fail(res, "Không tìm thấy phụ huynh", 404);
+  return ok(res, { password: parent.plainPassword || "" });
+});
+
+exports.resetParentPassword = asyncHandler(async (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6)
+    return fail(res, "Mật khẩu phải có ít nhất 6 ký tự", 400);
+
+  const parent = await User.findOne({
+    _id: req.params.id,
+    role: { $regex: /^parent$/i },
   });
+  if (!parent) return fail(res, "Không tìm thấy phụ huynh", 404);
+
+  parent.password = newPassword;
+  parent.plainPassword = newPassword;
+  await parent.save();
+  return ok(res, { message: "Đặt lại mật khẩu thành công" });
 });
 
 exports.getParentStudents = asyncHandler(async (req, res) => {
   if (req.user?.role === "Parent" && String(req.user._id) !== String(req.params.id)) {
-    return res.status(403).json({ message: "Forbidden" });
+    return fail(res, "Forbidden", 403);
   }
   const students = await Student.find({
     parentId: req.params.id,
     isDeleted: { $ne: true },
   });
-  res.json(students);
+  return ok(res, students);
 });
